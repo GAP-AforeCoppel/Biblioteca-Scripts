@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca de Scripts CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #1d4ed8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #1e40af; }
+        .dark ::-webkit-scrollbar-track { background: #1f2937; }
+        .dark ::-webkit-scrollbar-thumb { background: #fbbF24; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+        .script-content { white-space: pre-wrap; word-wrap: break-word; }
+        .nav-button.active { background-color: #1d4ed8; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .dark .nav-button.active { background-color: #fbbF24; color: #111827; }
+        #add-script-modal, #delete-confirm-modal, #login-modal { transition: opacity 0.3s ease; }
+        
+        /* Reglas de visibilidad para Admin */
+        .admin-only-flex { display: none !important; }
+        body.admin-mode .admin-only-flex { display: flex !important; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
+
+    <div id="app-container" class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="relative text-center mb-8">
+            <img src="logoafore.png" alt="Logo Afore Coppel" class="h-12 mx-auto mb-4">
+            <h1 class="text-4xl sm:text-5xl font-bold text-blue-800 dark:text-yellow-400">Biblioteca de Scripts</h1>
+            <p class="text-lg text-gray-500 dark:text-gray-400 mt-2">Soluciones rápidas para casos de CRM en Salesforce</p>
+            <div class="absolute top-0 right-0 flex items-center gap-4">
+                <div id="auth-controls"></div>
+                <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                    <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="mb-8 max-w-2xl mx-auto">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                     <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                </div>
+                <input type="text" id="search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-10 pr-4 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-yellow-500 transition" placeholder="Buscar por título o descripción...">
+            </div>
+        </div>
+
+        <nav id="category-filters" class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+            <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Todos</button>
+            <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">★ Favoritos</button>
+            <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">🔥 Populares</button>
+            <button data-category="unificacion" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Unificación/Separación</button>
+            <button data-category="exp" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Exp. y Serv.</button>
+            <button data-category="parciales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Parciales</button>
+            <button data-category="totales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Totales</button>
+            <button data-category="extras" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Extras</button>
+        </nav>
+
+        <main id="scripts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
+        
+        <div id="loading-indicator" class="text-center py-10"><p class="text-gray-500 dark:text-gray-400">Cargando scripts desde la nube...</p></div>
+    </div>
+
+    <footer class="text-center py-8 border-t border-gray-200 dark:border-gray-700">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            Herramienta creada por la Gerencia de Atención al Público - Afore Coppel
+        </p>
+    </footer>
+
+    <button id="add-script-btn" class="admin-only-flex fixed bottom-8 right-8 bg-blue-700 dark:bg-yellow-400 text-white dark:text-blue-900 w-16 h-16 rounded-full shadow-lg items-center justify-center text-3xl font-bold transform hover:scale-110 transition-transform">+</button>
+
+    <div id="add-script-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Agregar Nuevo Script</h2>
+            <form id="script-form">
+                <input type="hidden" id="script-id">
+                <div class="space-y-4">
+                    <input type="text" id="script-title" placeholder="Título del Script" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500">
+                    <textarea id="script-description" placeholder="Descripción breve" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="2"></textarea>
+                    <textarea id="script-text" placeholder="Texto completo del script..." required class="w-full p-2 border rounded font-mono dark:bg-gray-700 dark:border-gray-600" rows="6"></textarea>
+                    <select id="script-category" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">-- Seleccionar Categoría --</option>
+                        <option value="unificacion">Unificación/Separación</option>
+                        <option value="exp">Exp. y Serv.</option>
+                        <option value="parciales">Retiros Parciales</option>
+                        <option value="totales">Retiros Totales</option>
+                        <option value="extras">Extras</option>
+                    </select>
+                    <input type="text" id="script-variables" placeholder="Variables (separadas por coma, ej: FECHA, MONTO)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" id="cancel-btn" class="py-2 px-4 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancelar</button>
+                    <button type="submit" class="py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Guardar Script</button>
+                </div>
+            </form>
+             <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
+        </div>
+    </div>
+    
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
+            <h2 class="text-xl font-bold mb-4">¿Estás seguro?</h2>
+            <p class="text-gray-600 dark:text-gray-300 mb-6">Esta acción no se puede deshacer.</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-delete-btn" class="py-2 px-6 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">No</button>
+                <button id="confirm-delete-btn" class="py-2 px-6 rounded bg-red-600 text-white hover:bg-red-700">Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 relative">
+            <h2 class="text-2xl font-bold mb-4 text-center text-blue-800 dark:text-yellow-400">Acceso Admin</h2>
+            <form id="login-form">
+                <div class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Correo electrónico" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="password" id="login-password" placeholder="Contraseña" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <p id="login-error" class="text-red-500 text-sm text-center hidden"></p>
+                </div>
+                <div class="mt-6">
+                    <button type="submit" class="w-full py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Iniciar Sesión</button>
+                </div>
+            </form>
+            <button id="close-login-modal-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyAvq0CF94lVwGZAtXiFZKHwS5q4ZA489lM",
+          authDomain: "scripts-une-gap.firebaseapp.com",
+          projectId: "scripts-une-gap",
+          storageBucket: "scripts-une-gap.firebasestorage.app",
+          messagingSenderId: "567975326387",
+          appId: "1:567975326387:web:28edbab67668d1a829f6c6",
+          measurementId: "G-GJK53TR2D6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const scriptsCollection = collection(db, 'scripts');
+
+        let allScripts = [];
+        const container = document.getElementById('scripts-container');
+        const filters = document.getElementById('category-filters');
+        const searchInput = document.getElementById('search-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        let favorites = JSON.parse(localStorage.getItem('favoriteScripts')) || [];
+        const authControls = document.getElementById('auth-controls');
+
+        // --- FUNCIÓN PARA MOSTRAR LAS TARJETAS (RENDER) ---
+        const renderScripts = (scriptsToRender) => {
+            container.innerHTML = '';
+            if (scriptsToRender.length === 0 && loadingIndicator.style.display === 'none') {
+                container.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
+                return;
+            }
+
+            const activeCategory = filters.querySelector('.active').dataset.category;
+            const isPopularView = activeCategory === 'popular';
+            
+            scriptsToRender.forEach(script => {
+                const isFavorite = favorites.includes(script.id);
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col';
+                
+                let variablesHtml = '';
+                if (script.variables && script.variables.length > 0) {
+                    variablesHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Variables a Reemplazar:</h4><ul class="space-y-1">${script.variables.map(v => `<li class="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 rounded px-2 py-1 font-mono">${v}</li>`).join('')}</ul></div>`;
+                }
+
+                let popularBadgeHtml = '';
+                if (isPopularView) {
+                    const usageCount = script.copyCount || 0;
+                    popularBadgeHtml = `<div class="absolute top-3 right-20 flex items-center gap-1 text-xs bg-red-100 text-red-800 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full font-semibold">🔥<span>${usageCount}</span></div>`;
+                }
+                
+                let adminOptionsHtml = `
+                    <div class="admin-only-flex absolute top-2 right-10 z-10">
+                         <button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
+                         </button>
+                         <div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden">
+                            <a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Modificar</a>
+                            <a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50">Eliminar</a>
+                         </div>
+                    </div>`;
+
+                card.innerHTML = `
+                    ${adminOptionsHtml}
+                    ${popularBadgeHtml}
+                    <div class="p-6 flex-grow">
+                        <div class="flex justify-between items-start">
+                            <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${script.title}</h2>
+                            <button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors" data-id="${script.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-star-fill pointer-events-none ${isFavorite ? 'text-yellow-500' : ''}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L._173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg>
+                            </button>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${script.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                            <pre class="script-content font-sans">${script.scriptText}</pre>
+                        </div>
+                        ${variablesHtml}
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
+                        <button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ease-in-out hover:bg-yellow-500 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                            <span>Copiar Script</span>
+                        </button>
+                    </div>
+                `;
+                card.dataset.id = script.id;
+                container.appendChild(card);
+            });
+        };
+        
+        // --- FUNCIÓN CENTRAL PARA APLICAR FILTROS Y BÚSQUEDA ---
+        const applyFilters = () => {
+             const searchTerm = searchInput.value.toLowerCase();
+            const activeCategory = filters.querySelector('.active').dataset.category;
+            let filteredScripts = allScripts;
+            if (activeCategory === 'favorites') {
+                filteredScripts = allScripts.filter(script => favorites.includes(script.id));
+            } else if (activeCategory === 'popular') {
+                filteredScripts = [...allScripts].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
+            } else if (activeCategory !== 'all') {
+                filteredScripts = allScripts.filter(script => script.category === activeCategory);
+            }
+            if (searchTerm) {
+                filteredScripts = filteredScripts.filter(s => s.title.toLowerCase().includes(searchTerm) || s.description.toLowerCase().includes(searchTerm));
+            }
+            renderScripts(filteredScripts);
+        };
+
+        // --- MANEJO DE AUTENTICACIÓN Y DATOS ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                document.body.classList.add('admin-mode');
+                authControls.innerHTML = `<button id="logout-btn" class="text-sm text-gray-500 hover:text-blue-700 dark:hover:text-yellow-400">Salir</button>`;
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+            } else {
+                document.body.classList.remove('admin-mode');
+                authControls.innerHTML = `<button id="login-btn" title="Acceso Admin" class="p-1 rounded-full text-blue-600 dark:text-yellow-400 hover:text-blue-800 dark:hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg></button>`;
+                document.getElementById('login-btn').addEventListener('click', openLoginModal);
+            }
+            applyFilters();
+        });
+
+        onSnapshot(scriptsCollection, (snapshot) => {
+            allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            loadingIndicator.style.display = 'none';
+            applyFilters();
+        });
+
+        // --- LÓGICA DE EVENTOS DE UI ---
+        container.addEventListener('click', async function(e) {
+            const copyButton = e.target.closest('.copy-btn');
+            const favButton = e.target.closest('.favorite-btn');
+            const optionsButton = e.target.closest('.options-btn');
+            const editButton = e.target.closest('.edit-btn');
+            const deleteButton = e.target.closest('.delete-btn');
+
+            if (copyButton) { 
+                const card = copyButton.closest('.relative');
+                const scriptText = card.querySelector('.script-content').textContent;
+                const scriptId = card.dataset.id;
+                navigator.clipboard.writeText(scriptText);
+                
+                // Incrementar contador en Firebase
+                const scriptRef = doc(db, 'scripts', scriptId);
+                await updateDoc(scriptRef, { copyCount: increment(1) });
+                
+                const originalHTML = copyButton.innerHTML;
+                copyButton.innerHTML = `<span>¡Copiado!</span>`;
+                copyButton.classList.add('bg-green-100', 'dark:bg-green-900/50');
+                setTimeout(() => { copyButton.innerHTML = originalHTML; copyButton.classList.remove('bg-green-100', 'dark:bg-green-900/50');}, 2000);
+            }
+            if (favButton) {
+                const scriptId = favButton.dataset.id;
+                const starIcon = favButton.querySelector('svg');
+                if (favorites.includes(scriptId)) {
+                    favorites = favorites.filter(id => id !== scriptId);
+                    starIcon.classList.remove('text-yellow-500');
+                } else {
+                    favorites.push(scriptId);
+                    starIcon.classList.add('text-yellow-500');
+                }
+                localStorage.setItem('favoriteScripts', JSON.stringify(favorites));
+                if (filters.querySelector('.active').dataset.category === 'favorites') applyFilters();
+            }
+            
+            if (optionsButton) {
+                document.querySelectorAll('.options-menu').forEach(m => {
+                    if (m !== optionsButton.nextElementSibling) m.classList.add('hidden');
+                });
+                optionsButton.nextElementSibling.classList.toggle('hidden');
+            }
+            if (editButton) {
+                const scriptId = e.target.closest('[data-id]').dataset.id;
+                openEditModal(scriptId);
+            }
+            if (deleteButton) {
+                const scriptId = e.target.closest('[data-id]').dataset.id;
+                openDeleteModal(scriptId);
+            }
+        });
+
+        document.body.addEventListener('click', (e) => {
+            if (!e.target.closest('.options-btn')) {
+                document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+            }
+        });
+        
+        filters.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                filters.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                applyFilters();
+            }
+        });
+        searchInput.addEventListener('input', applyFilters);
+
+        // --- LÓGICA MODALES ---
+        const loginModal = document.getElementById('login-modal');
+        const loginForm = document.getElementById('login-form');
+        const closeLoginModalBtn = document.getElementById('close-login-modal-btn');
+        const loginError = document.getElementById('login-error');
+        
+        const openLoginModal = () => { loginModal.classList.remove('hidden'); setTimeout(() => loginModal.classList.remove('opacity-0'), 10); };
+        const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(() => { loginModal.classList.add('hidden'); loginForm.reset(); loginError.classList.add('hidden'); }, 300); };
+        
+        closeLoginModalBtn.addEventListener('click', closeLoginModal);
+        loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeLoginModal(); });
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then(() => closeLoginModal())
+                .catch(error => { loginError.textContent = 'Credenciales incorrectas.'; loginError.classList.remove('hidden'); });
+        });
+        
+        const modal = document.getElementById('add-script-modal');
+        const addScriptBtn = document.getElementById('add-script-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const form = document.getElementById('script-form');
+        const modalTitle = document.getElementById('modal-title');
+        const scriptIdInput = document.getElementById('script-id');
+
+        const openModal = (title = "Agregar Nuevo Script") => { modalTitle.textContent = title; modal.classList.remove('hidden'); setTimeout(() => modal.classList.remove('opacity-0'), 10); };
+        const closeModal = () => { modal.classList.add('opacity-0'); setTimeout(() => { modal.classList.add('hidden'); form.reset(); scriptIdInput.value = ''; }, 300); };
+        
+        addScriptBtn.addEventListener('click', () => openModal());
+        cancelBtn.addEventListener('click', closeModal);
+        closeModalBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        const openEditModal = (id) => {
+            const scriptToEdit = allScripts.find(s => s.id === id);
+            if (!scriptToEdit) return;
+            scriptIdInput.value = id;
+            document.getElementById('script-title').value = scriptToEdit.title;
+            document.getElementById('script-description').value = scriptToEdit.description;
+            document.getElementById('script-text').value = scriptToEdit.scriptText;
+            document.getElementById('script-category').value = scriptToEdit.category;
+            document.getElementById('script-variables').value = (scriptToEdit.variables || []).join(', ');
+            openModal("Modificar Script");
+        };
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const scriptId = scriptIdInput.value;
+            const scriptData = {
+                title: document.getElementById('script-title').value,
+                description: document.getElementById('script-description').value,
+                scriptText: document.getElementById('script-text').value,
+                category: document.getElementById('script-category').value,
+                variables: document.getElementById('script-variables').value.split(',').map(v => v.trim()).filter(v => v)
+            };
+            try {
+                if (scriptId) { 
+                    const scriptRef = doc(db, 'scripts', scriptId);
+                    await updateDoc(scriptRef, scriptData); 
+                } 
+                else { 
+                    scriptData.copyCount = 0; // Iniciar contador para nuevos scripts
+                    await addDoc(scriptsCollection, scriptData); 
+                }
+                closeModal();
+            } catch (error) { console.error("Error al guardar: ", error); alert("Hubo un error al guardar el script."); }
+        });
+
+        const deleteModal = document.getElementById('delete-confirm-modal');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        let scriptToDeleteId = null;
+
+        const openDeleteModal = (id) => { scriptToDeleteId = id; deleteModal.classList.remove('hidden'); setTimeout(() => deleteModal.classList.remove('opacity-0'), 10); };
+        const closeDeleteModal = () => { deleteModal.classList.add('opacity-0'); setTimeout(() => { deleteModal.classList.add('hidden'); scriptToDeleteId = null; }, 300); };
+        
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!scriptToDeleteId) return;
+            try {
+                await deleteDoc(doc(db, 'scripts', scriptToDeleteId));
+                closeDeleteModal();
+            } catch (error) { console.error("Error al eliminar: ", error); alert("Hubo un error al eliminar el script."); }
+        });
+        
+        const themeToggle = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            lightIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            darkIcon.classList.remove('hidden');
+        }
+        themeToggle.addEventListener('click', () => {
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        window.migrateInitialData = async () => {
+             const initialScripts = [
+                { category: 'unificacion', title: 'En revisión con el Infonavit', copyCount: 0, description: 'Cuando el área nos indica que el tramite de Separación de cuentas se encuentra en revisión con INFONAVIT.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que actualmente, tu solicitud de Separación de Cuentas se encuentra en revisión detallada por parte del Instituto de vivienda, se esta llevando a cabo el análisis correspondiente para asegurar una separación precisa y correcta de tu cuenta. Le solicitamos amablemente esperar la finalización de este proceso.\n\nEs importante tener en cuenta que el tiempo estimado para la Separación de Cuentas es de aproximadamente 30 días hábiles. Sin embargo, le informamos que este periodo podría extenderse en caso de que los institutos involucrados requieran un tiempo adicional para completar las validaciones necesarias.\n\nAgradecemos de antemano su comprensión y paciencia durante este proceso. Le aseguramos que estamos atentos al avance de su solicitud.`, variables: [] },
+                { category: 'unificacion', title: 'Se envia al PASO AL', copyCount: 0, description: 'Cuando el caso de Unificación de Cuentas se tomara en cuenta para el "PASO AL" y tiene que acudir a la subdelegación.', scriptText: `Te informamos que hemos estado trabajando en tu solicitud para brindarte el servicio requerido. En relación a tu trámite de Unificación de Cuentas, te comunicamos que este se encuentra actualmente en proceso de revisión por parte del instituto.\n\nCon el objetivo de agilizar este proceso y poder continuar con el servicio de manera más eficiente, te recomendamos atentamente acudir a la subdelegación del Instituto Mexicano del Seguro Social (IMSS) que te corresponda y solicitar la notificación de la unificación directamente a su Administradora de Fondos para el Retiro (Afore).\n\nAgradecemos profundamente tu paciencia y la confianza depositada en nosotros. Tenga la seguridad de que continuaremos trabajando con el mayor compromiso para brindarle el mejor servicio y experiencias memorables`, variables: [] },
+                { category: 'unificacion', title: 'Se encontraba en revisión por INFONAVIT (Ya se tuvo respuesta)', copyCount: 0, description: 'Cuando el caso de separación de cuentas se encontraba en revisión por parte de INFONAVIT y ya se obtuvo una respuesta.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos sobre el avance de tu Separación de Cuentas. Este proceso estuvo detenido mientras esperábamos respuesta de parte del instituto de vivienda, donde se realizaba el análisis correspondiente de tu cuenta.\n\nAhora, nos complace comunicarte que tu servicio ha retomado su curso y se encuentra nuevamente en proceso. Se iniciará un nuevo análisis para lograr la finalización de su trámite.\n\nEs importante tener en cuenta que el tiempo estimado para la Separación de Cuentas es de aproximadamente 30 días hábiles. Sin embargo, te informamos que este periodo podría extenderse en caso de que los institutos involucrados requieran un tiempo adicional para completar las validaciones necesarias.\n\nAgradecemos tu paciencia durante la espera y te aseguramos nuestro compromiso para concluir tu Separación de Cuentas lo antes posible.`, variables: [] },
+                { category: 'unificacion', title: 'NSS en el certificado para Unificación', copyCount: 0, description: 'Cuando es necesario que nos comparta una certificación donde venga el NSS tal, para continuar con la validación.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que en seguimiento a tu Unificación de Cuentas, actualmente no procede por falta de la Certificación de Regularización y/o Corrección de Datos Personales que vincule el NSS (Colocar NSS).\n\nTe invitamos acudir al IMSS para obtener dicho documento y enviarlo al correo ueapcoppel@aforecoppel.com para continuar con tu trámite.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['Colocar NSS'] },
+                { category: 'unificacion', title: 'Algun NSS debera estar registrado para la Unificación', copyCount: 0, description: 'Cuando ningún miembro de la familia se encuentra registrado con alguna administradora, deberán por lo menos registrar algún nss.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu proceso de Unificación de Cuentas actualmente no procede debido a una inconsistencia en el registro de uno de tus NSS.\n\nPara corregir esta situación y continuar con tu unificación, te invitamos a acudir a uno de nuestros módulos de atención de Afore Coppel con tu Certificado de Regularización y/o Corrección de Datos Personales. Al momento de tu visita, es importante que le solicites al Asesor Previsional que se contacte con la Unidad Especializada (UNE) para recibir el apoyo adecuado durante el registro.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'unificacion', title: 'Separación de Cuentas con disposición', copyCount: 0, description: 'Cuando el área nos menciona "Separación con disposición, en análisis".', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu solicitud de separación de cuentas se encuentra en revisión. Ya que se ha detectado una disposición de recursos en la cuenta individual, por lo que estamos llevando a cabo un análisis detallado para dictaminar los saldos correctos.\n\nEs importante tener en cuenta que el tiempo estimado para el proceso la Separación de Cuentas es de aproximadamente 30 días hábiles. Sin embargo, te informamos que este periodo podría extenderse en caso de que los institutos involucrados requieran un tiempo adicional para completar las validaciones necesarias\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'unificacion', title: 'Constancia de conclusión Uni/Sep', copyCount: 0, description: 'Cuando le compartimos la constancia de conclusión al trabajador sobre su servicio de Separación/Unificación.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que actualmente nos encontramos disponibles para atenderte como te mereces, adicional te informamos que tu (Colocar Servicio) ya concluyó con éxito por lo que te enviamos tu constancia de conclusión para los fines correspondientes.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['Colocar Servicio'] },
+                { category: 'exp', title: 'Diagnostico F52', copyCount: 0, description: 'Cuando un Beneficiario intenta modificar un dato certificable y ya cuenta con un derecho cargado.', scriptText: `Le informamos que su solicitud de alta de expediente como beneficiario no pudo ser procesada. Esto se debe a que existe un derecho cargado ante la empresa operadora que impide la modificación de un dato certificable.\n\nHemos estado trabajando para resolver esta situación. Por ello, lo invitamos a intentar realizar su trámite nuevamente a partir del (Fecha de respuesta del contigente en el que se envio).\n\nAgradecemos su paciencia y la confianza que ha depositado en nosotros. Seguimos comprometidos en brindarle el mejor servicio.`, variables: ["(Fecha de respuesta del contigente en el que se envio)"] },
+                { category: 'exp', title: 'Cambio de Genero', copyCount: 0, description: 'Cuando el trabajador realizo su cambio de genero y quiere modificar su CURP.', scriptText: `Reiterando nuestro compromiso de brindarte la atención y servicio en relación a tu Cuenta Individual te informamos que estuvimos revisando tu caso, se detecta que tu servicio no ha sido éxitoso debido a que tu CURP histórica no se encuentra ligada en RENAPO, esto quiere decir que tu CURP no esta ligada en BDNSAR por lo cual no puede ser consultada al momento de realizar tu modificación CURP, por lo que para solucionarlo es necesario que acudas a RENAPO o bien, envíes un correo electrónico a la dirección electrónica: tramitecurp@segob.gob.mx, indicando que al consultar la CURP certificada esta no aparece correcta con tu CURP histórica ligada, (te brindamos la liga en donde podrás consultarla para corroborar la información https://www.gob.mx/curp/ ) , el deber ser es que al momento de consultar tu CURP histórica esta debe aparecer ligada a la CURP ya certificada por ello la importancia de que envíes el correo a RENAPO o acudas de manera presencial explicando la situación para que lleven a cabo la regularización de tus datos a la brevedad posible y una vez solucionada, continuar con tu servicio para modificar tu CURP en uno de nuestros módulos de Atención.\n\nEs importante aclarar que este trámite es personalísimo, es decir lo debes hacer tú. Al momento de acudir a RENAPO o enviar el correo electrónico debes anexar tu Acta de nacimiento y tu Identificación oficial Original y Vigente.\n\nTe proporcionamos la liga en donde podrás visualizar los módulos de RENAPO así como, la línea telefónica para recibir orientación. https://www.gob.mx/cms/uploads/attachment/file/39942/DirectoriodeModulosCURP.pdf \nTeléfono 800 911 1111`, variables: [] },
+                { category: 'exp', title: 'Estatus Incompleto', copyCount: 0, description: 'Cuando el servicio de modificación/expediente quedan en estatus incompleto desde modulo.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que los servicios que realizaste no finalizaron correctamente, debido a que los servicios quedaron en estatus incompleto desde modulo por lo que no avanzarón a su validación, te invitamos a realizar nuevamente el tramite correspondiente con uno de nuestros asesores previsionales.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'CURP historica no aparece en RENAPO', copyCount: 0, description: 'Cuando no se puede generar la constancia CURP al querer realizar una actualización del expediente, y en 360 no cuenta con información en RENAPO.', scriptText: `Reiterando nuestro compromiso de brindarte la atención y servicio en relación a tu Cuenta Individual\nte informamos que estuvimos revisando tu caso, se detecta que tu servicio no ha sido éxito debido a\nque tu CURP histórica no se encuentra en RENAPO, esto quiere decir que tu CURP no tiene\ninformación en BDNSAR por lo cual no puede ser consultada al momento de realizar tu modificación\nCURP, por lo que para solucionarlo es necesario que acudas a RENAPO o bien, envíes un correo\nelectrónico a la dirección electrónica: tramitecurp@segob.gob.mx, indicando que al consultar la CURP\ncertificada esta aparece correcta con tu CURP histórica ligada, pero al realizar la consulta con la\nCURP histórica, ésta no aparece (te brindamos la liga en donde podrás consultarla para corroborar la\ninformación https://www.gob.mx/curp/ ) , el deber ser es que al momento de consultar tu CURP\nhistórica esta debe aparecer ligada a la CURP ya certificada sin embargo, en tu caso la consulta en la\npágina de RENAPO indica que “Los datos ingresados no son correctos” lo que ocasiona el problema\nya que, no se encuentra activa tu CURP histórica por ello la importancia de que envíes el correo a\nRENAPO o acudas de manera presencial explicando la situación para que lleven a cabo la\nregularización de tus datos a la brevedad posible y una vez solucionada, continuar con tu servicio\npara modificar tu CURP en uno de nuestros módulos de Atención.\n\nEs importante aclarar que este trámite es personalísimo, es decir lo debes hacer tú. Al momento de\nacudir a RENAPO o enviar el correo electrónico debes anexar tu Acta de nacimiento y tu Identificación\noficial Original y Vigente.\n\nTe proporcionamos la liga en donde podrás visualizar los módulos de RENAPO así como, la línea\ntelefónica para recibir orientación.\nhttps://www.gob.mx/cms/uploads/attachment/file/39942/DirectoriodeModulosCURP.pdf\nTeléfono 800 911 1111`, variables: [] },
+                { category: 'exp', title: 'Error en la huella del trabajador', copyCount: 0, description: 'Cuando en plataforma al querer enrolar sus huellas, le arroja el mensaje “Error en la huella del trabajador”.', scriptText: `Te informamos que alguna de las imágenes enviadas para el Enrolamiento del Trabajador no puede ser reconocida como huella dactilar, por ejemplo, por falta/exceso de presión, toma parcial, presencia de fondo negro, etc. Por lo tanto, es importante seguir intentando realizar el servicio verificando que los sensores estén en óptimas condiciones.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'Marca Modificación de datos IMSS', copyCount: 0, description: 'Cuando al querer realizar un servicio cuenta con la marca “Modificación de datos IMSS”.', scriptText: `Te informamos que tu cuenta se encuentra en un proceso operativo derivado de una Modificación de datos IMSS, por lo que para poder realizar tu servicio es necesario que tu cuenta se encuentre libre de este proceso activo, por ello es importante esperar a que finalice correctamente, o bien, te invitamos acudir al IMSS para realizar la aclaración correspondiente sobre dicho proceso.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'Expediente actualizado con éxito', copyCount: 0, description: 'Cuando el trabajador ya cuenta con su expediente actualizado correctamente.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que se refleja que ya cuentas con tu expediente de identificación conformado desde el día (Fecha) por lo que te invitamos a realizar el servicio que deseas.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['Fecha'] },
+                { category: 'exp', title: 'Diagnóstico M44 (Riesgo por comprobante de domicilio)', copyCount: 0, description: 'Rechazo en validación debido a que el comprobante de domicilio se encuentra fuera de vigencia.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que el trámite que realizaste presentó un rechazo en validación debido a que el comprobante de domicilio que brindaste se encuentra fuera de vigencia, te invitamos acudir nuevamente a un módulo de atención de Afore Coppel para realizar el servicio nuevamente. Es muy importante presentar el comprobante de domicilio original y no mayor a 3 meses de antigüedad.\n\n Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'Diagnóstico M37 (Riesgo por domicilio diferente OCR)', copyCount: 0, description: 'El comprobante de domicilio que brindaste presenta inconsistencias.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que el trámite que realizaste presentó un rechazo en validación debido a que el comprobante de domicilio que brindaste presenta inconsistencias, te invitamos acudir nuevamente a un módulo de atención de Afore Coppel para realizar el servicio de nuevo. Es muy importante presentar el comprobante de domicilio original y no mayor a 3 meses de antigüedad.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'Diagnóstico L14 (ID o Fotografía no corresponden)', copyCount: 0, description: 'El Tipo de Documento no corresponde al ID para la Identificación Oficial o la Fotografía.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que el trámite que realizaste presentó un rechazo en validación debido a que la identificación oficial o fotografía que se anexaron no corresponden, por ello, te invitamos acudir nuevamente a un módulo de atención de Afore Coppel para realizar el servicio nuevamente. Es muy importante presentar una identificación válida y vigente para realizar el servicio.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'Diagnóstico M43 (Riesgo por identificación vencida OCR)', copyCount: 0, description: 'Rechazo en validación debido a que la identificación oficial que presentaste se encuentra vencida.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que el trámite que realizaste presentó un rechazo en validación debido a que la identificación oficial que presentaste se encuentra vencida, por ello, te invitamos acudir nuevamente a un módulo de atención de Afore Coppel para realizar el servicio de nuevo. Es muy importante presentar una identificación válida y vigente para realizar el servicio.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'exp', title: 'Diagnóstico M36 (Riesgo por autenticación de identidad no exitosa OCR)', copyCount: 0, description: 'No fue posible validar la identidad del titular y del beneficiario con los documentos enviados.', scriptText: `En relación con tu reciente solicitud. Lamentablemente, no fue exitosa porque no fue posible validar la identidad del titular y del beneficiario con los documentos enviados.\n\nPara ayudarte a completar tu trámite con éxito, te compartimos la lista de documentos correctos que debes presentar.\n\nDocumentos Requeridos:\n\n1. Para el Titular:\n-Identificación Oficial. Si no cuentas con la INE del titular, por favor anexa uno de los siguientes documentos:\n\n-Acta de nacimiento del titular.\n-Acta de matrimonio vigente (con antigüedad no mayor a 6 meses).\n-Carta de Identidad expedida por el ayuntamiento.\n-Constancia de trámite expedida por el INE.\n-Resolución de Pensión (este documento es siempre la opción preferente).\nNota importante: El acta de defunción no se considera un documento válido para la identificación del titular.\n\n2. Para el Beneficiario:\n-Identificación Oficial vigente.\n\n3. Documentos Generales:\n-Acta de defunción.\n-Comprobante de domicilio a color (con antigüedad no mayor a 3 meses).\n\nConsejo Adicional: Recuerda que la Resolución de Pensión es un documento muy completo. Además de servir para identificar al titular, también puedes usarla para comprobar el parentesco y la personalidad del beneficiario.`, variables: [] },
+                { category: 'parciales', title: 'Pago Exitoso', copyCount: 0, description: 'Cuando el trabajador solicita estatus de su retiro parcial y este se refleja aceptado y pagado.', scriptText: `Te informamos que tu deposito fue procedente y puesto a tu disposición el día "FECHA" mediante la cuenta bancaria que proporcionaste al momento de la solicitud con terminación "Últimos 4 dígitos" con numero de referencia bancaria "Referencia bancaria", te invitamos a validar tu deposito. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ["FECHA", "Últimos 4 dígitos", "Referencia bancaria"] },
+                { category: 'totales', title: 'Saldos de vivienda homologados', copyCount: 0, description: 'Cuando el proceso de homologación de saldos de vivienda con INFONAVIT finalizó correctamente.', scriptText: `Queremos informarte que hemos estado trabajando con mucho esfuerzo en tu solicitud para brindarte el servicio que requieres. Nos complace comunicarte que hemos completado las acciones necesarias y te confirmamos que tus saldos han sido homologados correctamente.\n\nAhora, para que puedas disponer de los recursos de tu subcuenta de VIVIENDA, te invitamos cordialmente a acudir a tu módulo de atención de Afore Coppel más cercano. Allí, un asesor Previsional te asistirá para finalizar el servicio y puedas realizar tu retiro.\n\nAgradecemos enormemente tu paciencia y la confianza que has depositado en nosotros durante este proceso. Ten la seguridad de que seguimos trabajando para ofrecerte el mejor servicio y experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Libre de Marca Operativa', copyCount: 0, description: 'Cuando la cuenta del trabajador presentaba una marca y ahora se encuentra libre de procesos operativos.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te informamos que tu cuenta se encontraba en un proceso operativo, sin embargo, actualmente se encuentra libre de proceso por lo que te invitamos a verificar la información. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorable.`, variables: [] },
+                // NUEVOS SCRIPTS
+                { category: 'extras', title: 'Proceso de Reinversión (saldo previo)', copyCount: 0, description: 'Cuando el trabajador presenta dudas sobre la diferencia de sus saldos, ocasionada por el proceso de saldo previo', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. A continuación, te explicamos el motivo por el cual observas una diferencia temporal en tus saldos.\n\nEsto se debe a que tu cuenta pasó por un proceso llamado "saldo previo". Este procedimiento inicia cuando acudes al IMSS para tramitar tu pensión. El instituto solicita a la Afore los saldos de Retiro, Cesantía y Vejez (RCV), los cuales se desinvierten temporalmente de tu cuenta individual para que se pueda realizar el cálculo de tu pensión. Este proceso puede durar hasta 30 días hábiles. Una vez que el IMSS concluye su cálculo, solicita a tu Afore que los recursos se reinviertan en tu cuenta individual, permitiéndote continuar con tu proceso en la Afore tras la emisión de tu resolución. Por lo tanto, te confirmamos que tus saldos se encuentran correctos y podrás validarlo en tu próximo estado de cuenta o en un resumen de movimientos.\n\nEs importante aclarar que en este proceso no se toma en cuenta el saldo de vivienda, ya que el INFONAVIT es quien administra directamente esos recursos.\n\nAgradecemos tu paciencia y esperamos que esta información haya aclarado tus dudas.`, variables: [] },
+                { category: 'totales', title: 'Inconformidad de saldos derivado del Amparo 73', copyCount: 0, description: 'Cuando el trabajador está inconforme con los saldos otorgados derivado al Amparo 73', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que a continuación te explicamos más a detalle tu caso, el tipo de derecho con el que cuentas corresponde a un Amparo de Pensión Régimen 1973, en las pensiones otorgadas al amparo de la Ley del Seguro Social de 1973, los recursos correspondientes a las subcuentas de Cesantía en edad avanzada y Vejez, Cuota Social y Estatal de tu cuenta individual de Afore, son transferidas por la Afore al Gobierno Federal para financiar tu pensión, por lo que afore te deposita únicamente los saldos de Retiro 97 y vivienda 97 y en caso de contar con saldos de SAR 92 y vivienda 92 también se te depositan, el resto se transfirió al Gobierno Federal para el financiamiento de tu pensión.\n\nPor lo que la diferencia de saldos que detectas es derivada de la transferencia que se hizo para el financiamiento de tu pensión. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Minusvalías', copyCount: 0, description: 'Cuando el trabajador presenta dudas sobre disminuciones en su saldos y se deben a minusvalías', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te explicamos que tu dinero de tu Afore se invierte para crecer y es normal que tenga "altibajos" por los movimientos del mercado. A estas bajas temporales se les llama minusvalía.\n\nLo más importante es que sepas que no es una pérdida real de tu dinero, solo es una disminución de su valor en este momento. Como tu ahorro es a largo plazo, la tendencia es que se recupere y siga creciendo. La CONSAR, que es la autoridad que nos supervisa, vigila siempre que tu dinero esté seguro.\n\nEsperamos que esto te brinde tranquilidad. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Pago Por Aplicar', copyCount: 0, description: 'Cuando tiene un diagnóstico con código (1), por aplicar.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu depósito está en proceso de aplicación y estará disponible a más tardar en 24 horas. La acreditación final depende exclusivamente de tu institución bancaria. Te recordamos que es crucial que tu cuenta esté activa y con límites de abono (MTU) suficientes, ya que cualquier inconsistencia podría causar algún rechazo.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Fondos Insuficientes en la Cuenta', copyCount: 0, description: 'Cuando tiene un diagnóstico con código (3), fondos insuficientes en la cuenta.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que hemos revisado el estatus de tu pago y lamentamos informarte que fue rechazado. El banco nos notificó que había "Fondos Insuficientes en la Cuenta" para completar la transacción. Para que podamos concluir tu depósito, te pedimos que valides con tu banco que la cuenta no solo cuente con los fondos necesarios, sino que también tenga el límite de abono mensual (MTU) suficiente para recibir el pago, es importante que nos confirmes por este mismo medio cuando la situación esté resuelta. Agradecemos tu comunicación y confianza. ¡Estamos aquí para ayudarte!`, variables: [] },
+                { category: 'extras', title: 'Suspensión Temporal', copyCount: 0, description: 'Cuando tiene un diagnóstico con código (9), suspensión temporal.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que lamentablemente tu depósito fue rechazado por el banco. El banco nos notificó que tu cuenta se encuentra en suspensión temporal, para poder reenviar tu pago, es indispensable que te comuniques con tu institución bancaria y regularices el estatus de tu cuenta. Por favor, asegúrate también de que tu límite de abono mensual (MTU) sea suficiente para recibir el pago. Es importante que nos notifiques por este mismo medio en cuanto tu cuenta esté activa nuevamente, o bien, envíanos un nuevo estado de cuenta de otra cuenta bancaria a tu nombre con los datos correctos.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Caracter Invalido', copyCount: 0, description: 'Cuando tiene un diagnóstico con código (29), carácter invalido.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que lamentablemente tu depósito fue rechazado por el banco. El rechazo indica un "Carácter Inválido" en los datos. Esto significa que hubo un error de captura en el CLABE, RFC o en el nombre del titular, para poder reenviar tu pago, es indispensable que verifiques y corrijas los datos bancarios, y te asegures que tu cuenta cuente con el límite de abono mensual (MTU) suficiente para recibir el monto total. Es importante, que nos notifiques por este mismo medio cuando la corrección esté lista para procesar tu depósito nuevamente, o bien, envíanos un nuevo estado de cuenta de otra cuenta bancaria a tu nombre con los datos correctos.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Tipo de operación errónea', copyCount: 0, description: 'Cuando tiene un diagnóstico con código (26), tipo de operación errónea', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que lamentablemente tu depósito fue rechazado por el banco. Recibimos una notificación de "Tipo de Operación Errónea". Esto indica un error técnico en el sistema de recepción del banco, Para poder reenviar su pago, es indispensable que te comuniques con tu institución bancaria y resuelva este problema. Por favor, confirma que tu cuenta cuente con el límite de abono mensual (MTU) suficiente para recibir el monto total, es importante que nos notifiques por este mismo medio cuando tu banco te confirme que el problema está solucionado, o bien, envíanos un nuevo estado de cuenta de otra cuenta bancaria a tu nombre con los datos correctos.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'extras', title: 'Rechazos Bancarios (General)', copyCount: 0, description: 'Rechazos bancarios con diagnóstico: (30) Exc lmt de sdo aut de la cta, (31) Exc lmt abon perm xmes n l cta, (12) Cuenta bloqueada, etc.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud, por lo que te indicamos que tu retiro fue aprobado por nuestra parte. Sin embargo, la transferencia de tus recursos no se pudo completar, ya que recibimos un rechazo de tu banco con el siguiente motivo: [Aquí se debe escribir el motivo exacto del rechazo bancario]\n\nPara continuar y asegurar que recibas tu dinero sin inconvenientes, por favor, elige una de las siguientes opciones:\n\n1.Soluciona el problema con tu banco y notificarnos por este medio cuando tu cuenta esté lista para recibir la transferencia.\n2.Envíanos un nuevo estado de cuenta de otra cuenta bancaria que esté a tu nombre.\n\nSi eliges la segunda opción, asegúrate de que el documento cumpla con todos los siguientes requisitos:\n\n-Titularidad: Debe estar a tu nombre completo.\n-CLABE: La cuenta CLABE de 18 dígitos debe ser clara y legible.\n-RFC: Tu RFC debe ser visible y coincidir con el que tienes registrado con nosotros.\n-Vigencia: El documento no debe tener más de 3 meses de antigüedad.\n-Límites: La cuenta no debe tener un límite de depósito o este debe ser suficiente para recibir el monto.\n-Estado: La cuenta debe estar activa.\n\nEs importante que envíes el documento en formato PDF (sin contraseña) o como imagen en respuesta a este correo lo antes posible para continuar. Quedamos a la espera.`, variables: ['Aquí se debe de escribir el motivo exacto del rechazo bancario'] },
+                { category: 'parciales', title: 'Diagnóstico J62', copyCount: 0, description: 'Cuando se presentan diferencias del último Salario Base de Cotización notificado por el IMSS contra el último Salario Base de Cotización registrado en la BDNSAR.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu trámite no concluyó exitosamente, esto es debido a que a partir del 30 de Julio del 2024 Derivado de la publicación de las modificaciones a las Disposiciones de Carácter General en Materia de Operaciones de los Sistemas de Ahorro para el Retiro, se integró una nueva validación al proceso de certificación del retiro parcial por desempleo por parte del IMSS, es decir, que al momento de la certificación se detectaron diferencias entre el salario base de cotización registrado en el IMSS y en la empresa operadora, es por ello que tu caso se encuentra en proceso de Conciliación con los institutos, dicho proceso tiene una vigencia de 20 días naturales a partir de la fecha de tu intento de retiro (Colocar fecha de retiro) por lo que una vez cumpliéndose el lapso de tiempo mencionado puedes acudir a uno de nuestros módulos de Afore Coppel para realizar nuevamente tu servicio.\n\nDurante este periodo tu cuenta presentará una marca operativa, por lo que es importante no volver a intentar el servicio antes de los 20 días naturales, ya que el plazo de la marca se extenderá al último intento de Retiro, impidiendo que el servicio proceda exitosamente.\n\nAgradecemos tu paciencia y habernos dado la oportunidad de poder ayudarte de la mejor manera posible.`, variables: ['Colocar fecha de retiro'] },
+                { category: 'parciales', title: 'Diagnóstico J52', copyCount: 0, description: 'Rechazo en el IMSS, el asegurado tiene reconocidas menos de 150 semanas de cotización a la fecha de matrimonio.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que lamentablemente tu trámite no concluyó exitosamente, uno de los requisitos que establece el Instituto para poder realizar este retiro es que cuentes con al menos 150 semanas de cotización reconocidas a la fecha del matrimonio, el cual revisando tu caso se identifica que tienes menos de 150 semanas de cotización reconocidas a la fecha de tu matrimonio, en caso de que identifiques en el reporte de tus semanas cotizadas que si cumples con las 150 semanas a la fecha del matrimonio deberás acudir directamente a IMSS para que verifiquen y aclaren el total de tus semanas cotizadas.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico J53', copyCount: 0, description: 'Rechazo IMSS, el matrimonio se celebró después de 90 días hábiles a partir de la baja como asegurado, por lo que se encuentra fuera de la conservación de derechos para recibir esta prestación.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que lamentablemente tu trámite no concluyo exitosamente, esto es debido a que el matrimonio se celebró después de 90 días hábiles a partir de la baja como asegurado, para poder obtener este derecho debes de estar vigente en el IMSS a la fecha del matrimonio o bien dentro de los 90 días hábiles dado de baja, por lo que en tu caso se encuentra fuera de la conservación de derechos para recibir esta prestación.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico J54', copyCount: 0, description: 'Rechazo IMSS, el de la fecha en que contrajo matrimonio civil es anterior al 01 de julio de 1997.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que lamentablemente tu trámite no concluyó exitosamente, esto ocurrió derivado a que uno de los requisitos que establece el Instituto para poder realizar este retiro es que el matrimonio se debe contraer después del al 01 de julio de 1997, revisando tu caso se detecta que la fecha en que contrajiste matrimonio civil es anterior al 01 de julio de 1997, por lo que no podrás realizar este retiro por que se encuentra fuera de la conservación de derechos para recibir esta prestación.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico J55', copyCount: 0, description: 'Rechazo IMSS, Prestación otorgada previamente, con motivo de haber contraído matrimonio con anterioridad.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos qué entendemos tu preocupación por el estatus de tu trámite, y te explicamos el motivo del trámite por lo que lamentablemente no fue procedente. Tu solicitud de retiro por matrimonio no pudo ser aprobada porque el beneficio ya se te otorgó previamente. Este trámite solo puede efectuarse una única vez en la vida al contraer matrimonio civil, y tu prestación ya fue utilizada con anterioridad.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico J58.', copyCount: 0, description: 'Rechazo IMSS, se encuentra registrado un trámite de retiro por Desempleo, hasta después de los 120 días posteriores podrá realizar el trámite.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos entendemos tu preocupación por el estatus de tu trámite, y te explicamos que lamentablemente no pudo ser aprobado, ya que se encuentra registrado un retiro por desempleo en tu cuenta individual. Existe un periodo de espera obligatorio por parte del instituto debes esperar 120 días después de tu retiro por desempleo para poder iniciar el trámite de retiro por matrimonio, por lo que te invitamos a esperar a que se concluya el periodo establecido para poder iniciar tu servicio nuevamente.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Retiro Aportación Voluntaria Corto Plazo', copyCount: 0, description: 'Cuando aún no se cumplen los 6 meses de su primera aportación o su último retiro.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu Retiro de Aportaciones voluntarias lamentablemente no concluyó de manera exitosa, debido a que se detecta que aún no cumples con el requisito de esperar 6 meses desde tu primera aportación o desde tu último retiro. Una vez que pase este tiempo, podrás realizar el trámite de retiro de tu ahorro voluntario sin problemas.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Retiro Aportación Voluntaria Complementaria', copyCount: 0, description: 'Cuando aún no cumple los 65 años o no cuenta con un derecho otorgado para disponer de estos saldos.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para el Retiro de Aportaciones Voluntarias, la cual lamentablemente no pudo concluir de manera exitosa en este momento. Te explicamos la razón: este tipo de aportación se puede retirar sin aplicar una retención de impuestos una vez que cuentes con la edad de 65 años o al tener el derecho de pensión otorgado por parte del IMSS. Al no cumplir actualmente con alguno de estos dos requisitos, la solicitud no puede proceder bajo esa modalidad. Sin embargo, es importante que sepas que sí es posible disponer de estos saldos de forma anticipada, pero en ese caso la ley establece que se debe aplicar una retención de impuestos (ISR) por no cumplir con la edad de retiro. Por lo tanto, podrás disponer de tus recursos sin esta retención una vez que cumplas con la condición de la edad o la pensión.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Retiro Aportaciones de largo plazo', copyCount: 0, description: 'Información detallada sobre el retiro de aportaciones a largo plazo', scriptText: `Te informamos que estuvimos trabajando en tu solicitud y, para darte una respuesta clara, queremos explicarte cómo funcionan las Aportaciones Voluntarias a Largo Plazo.\n\nEs importante recordar que este tipo de ahorro está diseñado para obtener beneficios fiscales si el dinero permanece invertido por un mínimo de 5 años. Si decides retirar tus recursos antes de que se cumpla este plazo, la ley establece dos consecuencias fiscales importantes. Primero, se pierde el beneficio de la deducibilidad de impuestos que este ahorro te permite. Segundo, se debe aplicar una retención provisional del 20% de ISR sobre el monto total del retiro.\n\nTe recordamos que este mecanismo de ahorro fue creado para mantener la inversión por el tiempo mínimo y así aprovechar sus ventajas. Si tu objetivo es tener dinero disponible en menos tiempo, te sugerimos explorar otros tipos de aportaciones voluntarias, como las de corto plazo.\n\nAgradecemos tu paciencia y la oportunidad de aclarar tus dudas.`, variables: [] },
+                { category: 'parciales', title: 'Requisitos Para Retiro por Desempleo IMSS.', copyCount: 0, description: 'Cuando el trabajador solicita los requisitos para realizar el retiro por desempleo IMSS', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. Entendemos que estás buscando información sobre los requisitos para realizar un retiro por desempleo. ¡Con gusto te los compartimos!\n\nRequisitos, para ser elegible para el retiro parcial por desempleo, debes cumplir con las siguientes condiciones:\n-Tener al menos 46 días naturales en situación de desempleo.\n-No haber solicitado este retiro en los 5 años anteriores a la fecha de tu trámite.\n-Tener una Cuenta Individual activa en una AFORE.\n\nExpediente de Identificación:\n-Tu Expediente de Identificación es esencial para procesar tu solicitud, ya que valida tu identidad y tus datos de manera biométrica:\n-Es importante que tu Expediente de Identificación esté actualizado y con tu Enrolamiento Biométrico completo.\n-El expediente tiene una vigencia de 5 años.\n(Si tu expediente está vencido o le falta información, debes acudir a un módulo de AFORE Coppel para actualizarlo antes de iniciar el trámite de retiro)\n\nDocumentación:\n-Identificación oficial vigente (INE, pasaporte, etc.).\n-Comprobante de domicilio reciente.\n-CURP.\n-Número de Seguridad Social (NSS).\n-Carátula de tu Estado de Cuenta bancario.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Retiro Por Desempleo IMSS (Montos) Modalidad "A"', copyCount: 0, description: 'Cuando el trabajador solicite información acerca de la modalidad A en un retiro por desempleo.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y hemos confirmado que el tipo de retiro realizado corresponde a la Modalidad A de retiro por desempleo. Esta modalidad aplica a cuentas individuales que tienen al menos tres años de haber sido abiertas y cuentan con un mínimo de doce bimestres de cotización (dos años) acreditados ante el Instituto. De acuerdo con la normativa de la Ley del IMSS que rige este proceso, el monto a otorgar es el equivalente a 30 días de tu último Salario Base de Cotización (SBC), con un límite de hasta 10 veces el salario mínimo mensual general que rige en la Ciudad de México, por lo cual el saldo que te fue otorgado respeta esta lógica legal; para mayor conocimiento, puedes consultar directamente ante el IMSS dicha información, ya que el Instituto es quien establece estos criterios y determina los montos finales.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Retiro Por Desempleo IMSS (Montos) Modalidad "B"', copyCount: 0, description: 'Cuando el trabajador solicite información acerca de la modalidad B en un retiro por desempleo.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y hemos confirmado que el tipo de retiro efectuado corresponde a la Modalidad B de retiro por desempleo. Esta opción está disponible para trabajadores cuya Cuenta Individual tiene 5 años o más de haber sido abierta. El monto que te fue entregado en una sola exhibición se calculó respetando los criterios establecidos por la Ley del IMSS, la cual indica que se otorga la cantidad que resulte ser la menor entre dos opciones: el equivalente a 90 días de tu Salario Base de Cotización (SBC) de las últimas 250 semanas cotizadas o el 11.5% del total de tus recursos acumulados en la subcuenta de Retiro, Cesantía y Vejez (RCV); con base en esta lógica, el monto entregado es correcto. Para mayor conocimiento o detalles específicos sobre el cálculo, te recomendamos consultar directamente ante el IMSS, ya que el Instituto es quien establece estos criterios y determina los montos finales a otorgar.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Inconformidad saldos Modalidad “B” (11.5%)', copyCount: 0, description: 'Cuando el trabajador está inconforme con los saldos entregados. Cuando se entrega el 11. 5% de acuerdo al cálculo emitido por el IMSS.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y hemos confirmado que, al realizar el cálculo de tu retiro por desempleo bajo la Modalidad B, la cantidad entregada corresponde al 11.5% del saldo de tu Subcuenta de Retiro, Cesantía y Vejez (RCV), y no a los 90 días de tu Salario Base de Cotización (SBC). Esto se debe a que, por ley, se debe otorgar siempre la cantidad que resulte menor entre esas dos opciones, y en tu caso, el 11.5% del saldo de RCV fue la cantidad más baja. Adicionalmente, te aclaramos que en el cálculo del 11.5% del total de tu subcuenta RCV no se incluyen los recursos correspondientes a INFONAVIT, ya que, aunque la AFORE te los muestra en el estado de cuenta con fines informativos, el saldo físico y su administración se encuentran directamente en el Instituto del Fondo Nacional de la Vivienda para los Trabajadores (INFONAVIT).\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Inconformidad saldos Modalidad “B” (90 Días)', copyCount: 0, description: 'Cuando el trabajador está inconforme con los saldos entregados. Cuando se entrega el monto de 90 días del último SBC de acuerdo al cálculo emitido por el IMSS.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y hemos confirmado que, al realizar el cálculo de tu retiro por desempleo bajo la Modalidad B, la cantidad entregada corresponde al equivalente a 90 días de tu Salario Base de Cotización (SBC). Esto se debe a que, por ley, se debe otorgar siempre la cantidad que resulte menor entre dos opciones (90 días de SBC o el 11.5% del saldo de RCV), y en tu caso, los 90 días de SBC fue la cantidad más baja a la que tenías derecho. Adicionalmente, te aclaramos que en el cálculo del 11.5% de la subcuenta RCV (la opción comparativa) no se incluyen los recursos correspondientes a INFONAVIT, ya que la AFORE solo los refleja en el estado de cuenta con fines informativos, pero el saldo físico y su administración se encuentran directamente en el Instituto del Fondo Nacional de la Vivienda para los Trabajadores (INFONAVIT).\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Inconformidad saldos Modalidad “A”', copyCount: 0, description: 'Trabajador inconforme con los saldos , cuando se hace entrega de Modalidad "A"', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y entendemos tu inconformidad respecto al monto liquidado en tu retiro por desempleo bajo la Modalidad A. Queremos reiterar que el cálculo del pago se adhiere estrictamente a lo establecido en la Ley del Seguro Social (IMSS). Para esta modalidad, el monto máximo a otorgar es el equivalente a 30 días de tu último Salario Base de Cotización (SBC), limitado legalmente a 10 veces el salario mínimo mensual general vigente en la Ciudad de México (CDMX). Si consideras que el cálculo no refleja correctamente tu SBC o tienes dudas sobre los criterios aplicados, te recomendamos acudir directamente a una subdelegación del IMSS, ya que es el Instituto la única entidad facultada por ley para establecer y validar tu derecho.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico 522', copyCount: 0, description: 'El Trabajador no reúne los requisitos del artículo 191 de la LSS 97.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y hemos detectado que tu trámite de retiro parcial por desempleo fue rechazado debido a que no reúnes los requisitos estipulados en el Artículo 191 de la Ley del IMSS.\n\nTe compartimos los requisitos, y te invitamos a validarlo en tu constancia de semanas cotizadas.\n-Contar con tu Expediente de Identificación con tus datos y biométricos actualizados.\n-La Solicitud de Retiro por Desempleo debe presentarse a partir de los 46 días naturales desde la fecha en que se realizó tu baja de tu último empleo y del IMSS.\n-Tener al menos 3 años de haberte registrado en una AFORE.\n-Que hayan transcurrido 5 años desde tu último Retiro por Desempleo.\n-Haber cotizado en el IMSS un mínimo de 12 bimestres (aproximadamente 2 años, o 104 semanas cotizadas).\n\nSi tienes dudas sobre tus semanas cotizadas o tu historial laboral, te sugerimos consultar directamente ante el IMSS, ya que el Instituto es quien administra y certifica esa información.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico 521', copyCount: 0, description: 'El Trabajador realizó un retiro por desempleo anteriormente y aún no han transcurrido 5 años.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, entendemos que esta situación te genere preocupación, por lo que te detallamos el motivo del rechazo de tu solicitud:\n\nHemos validado tu solicitud de retiro parcial, y te informamos que no fue aprobada debido a que se identifica que realizaste un retiro por desempleo dentro de los últimos 5 años. Dado que este servicio solo se puede realizar una vez cada 5 años tu solicitud no fue procedente.\n\nPor lo tanto, es necesario que esperes a que se cumpla el tiempo establecido, para que puedas iniciar nuevamente la solicitud.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico 525', copyCount: 0, description: 'Existen diferencias con el nombre registrado en el IMSS. El Trabajador deberá acudir a la ventanilla del Instituto a aclarar la causa del rechazo', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. Entendemos que esta situación te genera preocupación, y a continuación te detallamos el motivo del rechazo de tu solicitud.\n\nTu trámite no procedió debido a un error de datos en tu expediente. Hemos detectado diferencias en tu nombre registrado en tu cuenta AFORE y la información que tiene el IMSS.\n\nPara corregir esto y poder continuar con tu trámite, es indispensable que acudas a una ventanilla del IMSS para realizar la actualización oficial de tus datos personales y tu Número de Seguridad Social (NSS).\n\nUna vez que el IMSS certifique y corrija oficialmente tu información, podremos continuar el proceso de retiro.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico 523', copyCount: 0, description: 'Cuando el Trabajador aún no cumple con 46 días de desempleo', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. Entendemos que esta situación te genera preocupación, y a continuación te detallamos el motivo del rechazo de tu solicitud.\n\nEn este momento, la solicitud no pudo ser finalizada debido a que no cumples con los 46 días naturales dado baja autorizados, lo cual es un requisito indispensable de la Ley del Seguro Social (LSS).\n\nPara que puedas validar tu estatus de baja y la fecha de tu última cotización con precisión, te invitamos a consultar tu Constancia de Semanas Cotizadas o acceder a la siguiente página oficial del IMSS:\nhttps://serviciosdigitales.imss.gob.mx/semanascotizadas-web/usuarios/LoginAsegurado\n\nUna vez que cumplas con los 46 días requeridos, podrás iniciar tu solicitud nuevamente. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Diagnóstico 520', copyCount: 0, description: 'El Trabajador no reúne los requisitos del artículo 191 de la LSS 97', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. Entendemos que esta situación te genera preocupación, y a continuación te detallamos el motivo del rechazo de tu solicitud.\n\nHemos revisado su solicitud de retiro parcial por desempleo y le informamos que no pudo ser aprobada debido a que usted se encuentra cotizando activamente al IMSS a la fecha de la solicitud. Le recordamos que la Ley del Seguro Social exige como requisito clave haber estado dado de baja oficialmente del IMSS por un mínimo de 46 días naturales antes de poder iniciar el trámite.\n\nPara que pueda verificar su estatus laboral y su fecha de baja con precisión, le invitamos a consultarlo en la siguiente página oficial, descargando su Constancia de Semanas Cotizadas: https://serviciosdigitales.imss.gob.mx/semanascotizadas-web/usuarios/LoginAsegurado.\n\nUna vez que cumpla con los días requeridos y su estatus de baja esté confirmado por el IMSS, estaremos aquí para ayudarle a iniciar su trámite nuevamente.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Trabajador no reconoce el retiro', copyCount: 0, description: 'Cuando el trabajador no reconoce el retiro por desempleo de su cuenta individual.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. Entendemos tu preocupación al no reconocer este movimiento.\n\nQueremos confirmarte que hemos verificado los registros y se identifica un retiro por desempleo en tu cuenta con fecha [Indicar fecha del retiro].\n\nDada la naturaleza sensible y segura de este trámite, el cual requiere tu Firma Electrónica SAR (validación biométrica mediante huellas o rostro), es nuestra prioridad descartar cualquier posibilidad de irregularidad.\n\nPara agilizar la verificación y asegurar la autenticidad de esta solicitud, te solicitamos amablemente nos proporciones la Imagen de tu INE (vigente y legible). Esta documentación nos permitirá cruzar la información biométrica y de identidad para confirmar que la solicitud fue realizada por ti o, en caso contrario, iniciar los procedimientos correspondientes.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['Indicar fecha del retiro'] },
+                { category: 'parciales', title: 'Requisitos Para Retiro por Matrimonio IMSS.', copyCount: 0, description: 'Cuando el trabajador solicita los requisitos para realizar el retiro por Matrimonio IMSS.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido y agradecemos tu interés en conocer los requisitos para el Retiro Parcial por Matrimonio. Este es un derecho que, por ley, puedes ejercer una sola vez en tu vida.\n\nPara poder iniciar tu solicitud y acceder a este beneficio, es indispensable que cumplas con los siguientes requisitos:\n-Contar con tu Expediente de Identificación con tus datos y biométricos actualizados (huellas dactilares, fotografía y firma digital).\n-Tener un mínimo de 150 semanas cotizadas en el IMSS acreditadas antes de la fecha de celebración de tu matrimonio.\n-Es necesario estar vigente ante el IMSS bajo la Ley 97.\n-No haber solicitado anteriormente este beneficio.\n-Si ya no estás cotizando al IMSS, podrás solicitar esta prestación siempre y cuando te hayas casado dentro de los 90 días hábiles siguientes a tu fecha de baja.\n\nUna vez que cumplas con todos estos requisitos, podremos procesar tu solicitud. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'totales', title: 'Cargas DATAMAR NO CARGADA EN SICI', copyCount: 0, description: 'Cuando solicitamos la carga DATAMART del derecho del trabajador.', scriptText: `Te informamos que hemos iniciado el proceso para solicitar la carga de tu resolución ante la empresa operadora. Es importante mencionar que la conclusión de este proceso depende de la gestión del Instituto Mexicano del Seguro Social (IMSS).\n\nAdicionalmente, y con el objetivo de agilizar el proceso en la medida posible, te recomendamos acudir a la subdelegación del IMSS correspondiente para solicitar el Reimpacto de tu resolución ante la empresa operadora. Realizar este trámite de manera paralela puede contribuir a una gestión más eficiente.\n\nTe compartimos el siguiente directorio para que puedas ubicar la subdelegación que te corresponde: www.imss.gob.mx/directorio.`, variables: [] },
+                { category: 'totales', title: 'Pensión por invalidez ( Es Temporal)', copyCount: 0, description: 'Cuando el trabajador presenta el derecho por invalidez, aún no cumple con los 60 años y es de carácter temporal.', scriptText: `Tras la revisión del dictamen emitido por el Instituto Mexicano del Seguro Social (IMSS), lamentamos informarte que, de acuerdo a la resolución emitida, no cumples con los criterios establecidos para obtener una pensión por invalidez de carácter definitivo. La resolución emitida corresponde a una invalidez temporal, por lo que tu derecho otorgado actualmente no puede ser cargado ante el instituto para una pensión definitiva.\n\nAgradecemos profundamente tu paciencia y la confianza depositada en nosotros durante este proceso. Ten la seguridad de que seguiremos trabajando con compromiso para ofrecerte el mejor servicio y experiencias memorables en el futuro.\n\nEn caso de tener alguna duda o requerir mayor información sobre tu dictamen, te sugerimos contactar directamente al IMSS para que puedan brindarte detalles específicos sobre tu resolución de invalidez temporal y los pasos a seguir.`, variables: [] },
+                { category: 'totales', title: 'Negativa 97 por cesantía y aún no tiene 60 años.', copyCount: 0, description: 'Cuando el trabajador presenta el derecho por Negativa de pensión del régimen 97 y aun no cumple la edad de 60 años.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que de acuerdo al derecho que presentas de una negativa de pensión por cesantía bajo el régimen del 97, no eres acreedor a solicitar los recursos de tu cuenta en este momento.\n\nEsto se debe a que, actualmente no has alcanzado la edad mínima requerida de 60 años para que te corresponda una pensión por cesantía bajo el régimen mencionado, será necesario que te presentes nuevamente a la subdelegación del IMSS que te corresponda una vez cumplas con la edad mínima requerida de 60 años, para iniciar un nuevo servicio de solicitud de pensión.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables`, variables: [] },
+                { category: 'totales', title: 'Diagnóstico 233 RFC Prevalidador', copyCount: 0, description: 'Cuando se presenta un rechazo en el diagnóstico pre validado infonavit por 233 RFC.', scriptText: `Queremos informarte que hemos estado trabajando en tu solicitud de retiro total. Comprendemos la importancia de este trámite para ti y lamentamos sinceramente cualquier inconveniente que la demora haya podido causarte.\n\nAl revisar tu caso, hemos identificado el motivo por el cual tu solicitud no ha podido avanzar: es indispensable que tu RFC a 13 posiciones sea correctamente capturado en el apartado de "Datos generales del trabajador". Este es el detalle que nos impide dar continuidad a tu proceso.\n\nPor ello, te invitamos a acudir nuevamente a uno de nuestros módulos de Afore Coppel y comentarle al Asesor Previsional la importancia de agregar tu RFC a 13 posiciones en la sección mencionada.\n\nAgradecemos sinceramente tu paciencia y la confianza que has depositado en Afore Coppel. Ten la seguridad de que seguimos trabajando para brindarte el mejor servicio y experiencias memorables.`, variables: [] },
+                { category: 'totales', title: 'Marca Saldos Previos Vigente', copyCount: 0, description: 'Cuando la marca de saldos previos está vigente y aún no se cumplen los 30 días hábiles de vigencia.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu cuenta se encuentra en proceso de Consulta de Saldos Previos por parte del IMSS, la cual tiene una duración de 30 días hábiles a partir del día (Fecha de inicio), por lo que es importante esperar a que concluya dicho proceso para realizar el trámite de retiro total debido a que es el proceso que se lleva a cabo para hacer los cálculos de la cantidad a entregar en tu pensión.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['Fecha de inicio'] },
+                { category: 'totales', title: 'Carta de Agotamiento de Recursos.', copyCount: 0, description: 'Cuando el trabajador nos solicita su carta de agotamiento de recursos debido a su pensión garantizada.', scriptText: `Te informamos que estuvimos trabajando en su solicitud para poder brindarle el servicio requerido. Por este medio presente le notificamos que, respecto al contrato que usted celebró con Afore Coppel S. A. de C. V. para la administración de su retiro por Pensión Garantizada, se realizó su último pago mensual y con esto los recursos de su Cuenta Individual han sido agotados, con lo cual damos por terminado dicho contrato.\n\nAgradecemos su paciencia así como su confianza, y seguiremos trabajando para brindarle el mejor servicio así como experiencias memorables.`, variables: [] },
+                { category: 'totales', title: 'Cuenta con crédito vivienda.', copyCount: 0, description: 'Cuando el trabajador intenta disponer de sus saldos de vivienda, sin embargo, no procede debido a que cuenta con un crédito de vivienda.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud de retiro total. Al validar tu cuenta, identificamos que actualmente se registra un crédito de vivienda activo. La normativa establece que mientras un crédito esté vigente, el saldo de la Subcuenta de Vivienda no puede ser retirado. Ante esta situación, te presentamos los dos posibles escenarios:\n\n-Si tu crédito sigue activo:\nNo es necesario que hagas nada por ahora. Una vez que termines de pagarlo, podrás solicitar nuevamente el retiro de estos recursos.\n\n-Si ya terminaste de pagar tu crédito:\nPara poder liberar tus fondos, es indispensable que nos hagas llegar tu Carta de No Adeudo, emitida por la institución de vivienda.\n\nSi ya cuentas con este documento, por favor envíalo al correo ueapcoppel@aforecoppel.com para actualizar tu expediente y continuar con el trámite.\n\nAgradecemos tu comprensión y quedamos a tu disposición.`, variables: [] },
+                { category: 'extras', title: 'Estado de Cuenta', copyCount: 0, description: 'Cuando le hacemos llegar el estado de cuenta al trabajador.', scriptText: `Derivado a tu consulta te enviamos tu estado de cuenta más actual correspondiente al (primer - segundo- tercer) cuatrimestre del 2025 (Meses), adicional te invitamos a registrarte en la App de Afore móvil para que puedas consultar tus movimientos en el momento en que lo requieras. Agradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['primer - segundo- tercer', 'Meses'] },
+                { category: 'extras', title: 'Citar al trabajador', copyCount: 0, description: 'Cuando ocupamos citar al trabajador para brindar acompañamiento a través de un monitoreo.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que para asegurar que esta vez tu servicio se realice de manera exitosa, te invitamos a acudir nuevamente a uno de nuestros módulos de atención de Afore Coppel de lunes a viernes en horario de apertura de tienda.\nEs importante que le comentes al asesor previsional que te atienda que se comunique con el área de la Unidad Especializada (UNE). De esta manera, desde nuestro segundo nivel de apoyo, podremos brindarte un seguimiento especial a tu caso durante el servicio y asegurar la correcta gestión de tu trámite.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables`, variables: [] },
+                { category: 'extras', title: 'Fondo de pensiones bienestar', copyCount: 0, description: 'Cuando el trabajador nos envía el formato de devolución del FPB y se envía para el próximo contingente.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido. Actualmente, hemos recibido tu solicitud de Devolución de Recursos del Fondo del Bienestar y nos encontramos gestionando tu petición. La devolución de estos recursos a tu cuenta individual tiene un tiempo estimado de aproximadamente seis semanas.\n\nPor lo anterior, te invitamos a revisar tu cuenta después de este periodo en uno de nuestros módulos de atención con Asesores Previsionales. Para ubicar el módulo más cercano, puede consultar el siguiente enlace: https://aforecoppel.com/modulos-afore. Así mismo para asegurar una atención oportuna, le recomendamos agendar una cita previamente a través de nuestra APP AforeMóvil o en el portal de internet: https://www.aforeweb.com.mx/. En caso de que decidas acudir sin cita, te informamos que podrías tener que esperar tu turno según la disponibilidad del momento.\n\nAgradecemos tu paciencia y comprensión durante este proceso. Tenga la seguridad de que estamos trabajando para que la devolución se realice a la brevedad posible. Seguiremos esforzándonos para brindarte el mejor servicio y experiencias memorables.`, variables: [] },
+                { category: 'parciales', title: 'Marca Retiros Proceso de Retiro Parcial Vigente', copyCount: 0, description: 'Cuando la marca de Retiros Proceso de Retiro Parcial está activa y aún se encuentra vigente.', scriptText: `Te informamos que estuvimos trabajando en tu solicitud para poder brindarte el servicio requerido, por lo que te indicamos que tu cuenta se encuentra en un proceso operativo activo, ya que tu servicio de retiro parcial que realizaste no concluyó con éxito. Así que es importante esperar a que finalice correctamente de acuerdo a su tiempo normativo, debido a esto, te mencionamos que podrás generar una nueva solicitud después del día (Fecha de vigencia), siempre y cuando tu cuenta ya se encuentre libre de procesos operativos ante el instituto.\n\nAgradecemos tu paciencia así como tu confianza, y seguiremos trabajando para brindarte el mejor servicio así como experiencias memorables.`, variables: ['Fecha de vigencia'] }
+            ];
+
+             const migrationConfirm = confirm("¿Estás seguro de que quieres migrar los datos iniciales? Esta acción solo debe realizarse una vez en una base de datos vacía.");
+            if (!migrationConfirm) {
+                console.log("Migración cancelada por el usuario.");
+                return;
+            }
+            console.log("Iniciando migración...");
+            for (const script of initialScripts) {
+                try {
+                    const { id, ...scriptData } = script; 
+                    scriptData.copyCount = scriptData.copyCount || 0;
+                    await addDoc(scriptsCollection, scriptData);
+                    console.log(`Script "${script.title}" migrado con éxito.`);
+                } catch (e) {
+                    console.error("Error migrando script:", script.title, e);
+                }
+            }
+            console.log("¡Migración de datos iniciales completada!");
+        };
+    </script>
+</body>
+</html>
+
