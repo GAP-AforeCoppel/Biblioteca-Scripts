@@ -253,7 +253,7 @@
                             <input type="text" id="var-${script.id}-${v}" data-variable-name="${v}" class="variable-input w-2/3 p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm focus:ring-1 focus:ring-blue-500 dark:focus:ring-yellow-500 outline-none" placeholder="Valor para ${v}">
                         </div>
                     `).join('');
-                    variablesHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Reemplazar Variables:</h4><div class="space-y-2">${variablesHtml}</div></div>`;
+                    variablesHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Reemplazar Variables:</h4><div class="space-y-2">${variableInputs}</div></div>`;
                 }
 
                 let popularBadgeHtml = '';
@@ -877,4 +877,5 @@
 
     </script>
 </body>
+
 </html>
