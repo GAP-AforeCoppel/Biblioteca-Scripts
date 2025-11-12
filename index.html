@@ -1147,17 +1147,22 @@
             
             if (currentView === 'scripts') {
                 scriptCategorySelect.classList.remove('hidden');
+                scriptCategorySelect.required = true; // SÍ es requerido
                 queryCategorySelect.classList.add('hidden');
+                queryCategorySelect.required = false; // NO es requerido
                 variablesInput.classList.remove('hidden');
             } else { // 'querys'
                 scriptCategorySelect.classList.add('hidden');
+                scriptCategorySelect.required = false; // NO es requerido
                 queryCategorySelect.classList.remove('hidden');
+                queryCategorySelect.required = true; // SÍ es requerido
                 variablesInput.classList.add('hidden');
             }
             
             itemModal.classList.remove('hidden');
             setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
+        
         const closeModal = () => { itemModal.classList.add('opacity-0'); setTimeout(() => { itemModal.classList.add('hidden'); itemForm.reset(); itemIdInput.value = ''; }, 300); };
         
         if(addItemBtn) addItemBtn.addEventListener('click', () => openModal(currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query'));
@@ -1433,6 +1438,7 @@
 </body>
 
 </html>
+
 
 
 
