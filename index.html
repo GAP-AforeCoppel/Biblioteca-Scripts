@@ -23,7 +23,7 @@
         .script-content { white-space: pre-wrap; word-wrap: break-word; }
         .nav-button.active { background-color: #1d4ed8; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .dark .nav-button.active { background-color: #fbbF24; color: #111827; }
-        #add-script-modal, #delete-confirm-modal, #login-modal, #info-modal { transition: opacity 0.3s ease; }
+        #add-item-modal, #delete-confirm-modal, #login-modal, #info-modal { transition: opacity 0.3s ease; }
         
         /* Reglas de visibilidad para Admin */
         .admin-only-flex { display: none !important; }
@@ -43,8 +43,39 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; }
         }
-        .script-card-enter {
+        .card-enter {
             animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Estilos para el Navegador Principal de Pestañas */
+        .main-nav-btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .main-nav-btn.active {
+            background-color: #1d4ed8; /* blue-700 */
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .dark .main-nav-btn.active {
+            background-color: #fbbF24; /* yellow-400 */
+            color: #111827; /* gray-900 */
+        }
+        
+        /* Estilo para las píldoras de código en la sección de aprendizaje */
+        .code-pill {
+            background-color: #dbeafe; /* blue-100 */
+            color: #1e40af; /* blue-800 */
+            font-family: monospace;
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.125rem 0.5rem; /* px-2 py-0.5 */
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600;
+        }
+        .dark .code-pill {
+            background-color: #374151; /* gray-700 */
+            color: #93c5fd; /* blue-300 */
         }
     </style>
 </head>
@@ -54,10 +85,9 @@
         
         <div class="flex justify-between items-center py-4 px-2 mb-6">
             <div class="flex items-center gap-4">
-                <!-- Tus imágenes originales - se verán en tu web -->
-                <img src="logoafore.png" alt="Logo Afore Coppel" class="h-14">
+                <img src="logoafore.png" alt="Logo Afore Coppel" class="h-14" onerror="this.alt='Logo Afore Coppel'; this.style.display='none';">
                 <div class="border-l border-gray-300 dark:border-gray-600 h-14"></div>
-                <img src="logogap.png" alt="Logo Gerencia de Atención al Público" class="w-24">
+                <img src="logogap.png" alt="Logo Gerencia de Atención al Público" class="w-24" onerror="this.alt='Logo Gerencia'; this.style.display='none';">
             </div>
             <div class="flex items-center gap-4">
                 <div id="auth-controls"></div>
@@ -68,48 +98,194 @@
             </div>
         </div>
 
-        <!-- Tu imagen de fondo original - se verá en tu web -->
-        <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-40" style="background-image: url('cafe.png');">
-            <div class="absolute inset-0 bg-blue-900 bg-opacity-50"></div>
-            <div class="relative z-10">
-                <h1 class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Scripts</h1>
-                <p class="text-lg text-gray-200 dark:text-gray-300 mt-2">Soluciones rápidas para casos de CRM en Salesforce</p>
-            </div>
-        </header>
-
-        <div class="mb-8 max-w-2xl mx-auto">
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                     <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
-                </div>
-                <input type="text" id="search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-10 pr-4 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-yellow-500 transition" placeholder="Buscar por título o descripción...">
-            </div>
+        <!-- =========== NAVEGACIÓN PRINCIPAL (SCRIPTS/QUERYS) =========== -->
+        <div id="main-nav" class="flex flex-wrap justify-center gap-4 mb-8">
+            <button data-view="scripts" class="main-nav-btn active flex items-center gap-2 font-medium py-3 px-6 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM6.028 3.85a.5.5 0 0 1 .5-.5h2.944a.5.5 0 0 1 .5.5v.35c0 .34-.14.66-.38.89l-1.2 1.196a.5.5 0 0 0-.14.34V8.5a.5.5 0 0 1-1 0V6.626a.5.5 0 0 0-.14-.34L6.409 5.09a.5.5 0 0 1-.38-.89v-.35zM4 11.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5z"/><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H4z"/></svg>
+                Scripts
+            </button>
+            <button data-view="querys" class="main-nav-btn flex items-center gap-2 font-medium py-3 px-6 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.026a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v3.974a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5V1.026zM5 1.526v3.448h6V1.526H5z"/><path d="M12.5 6a.5.5 0 0 1 .5.5v3.974a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5V6.5a.5.5 0 0 1 .5-.5h7zM5 6.526v3.448h6V6.526H5z"/><path d="M4 11.026a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v3.974a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5V11.026zM5 11.526v3.448h6v-3.448H5z"/></svg>
+                Querys
+            </button>
         </div>
 
-        <nav id="category-filters" class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
-            <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Todos</button>
-            <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">★ Favoritos</button>
-            <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">🔥 Populares</button>
-            <button data-category="unificacion" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Unificación/Separación</button>
-            <button data-category="exp" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Exp. y Serv.</button>
-            <button data-category="parciales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Parciales</button>
-            <button data-category="totales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Totales</button>
-            <button data-category="extras" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Extras</button>
-            
-            <!-- [NUEVO] Botón de Solicitudes -->
-            <button id="pending-requests-btn" data-category="pending" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md hidden items-center gap-2" style="display: none;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
-                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zM5.89.022A8 8 0 0 1 8 0v1a7 7 0 0 0-2.11.997l-.074-.997zM8 4a.5.5 0 0 1 .5.5v3.293l2.146 2.147a.5.5 0 0 1-.708.708L8 8.207V4.5A.5.5 0 0 1 8 4z"/>
-                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-                    <path d="M.5 8a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 .5 8zm2.879.854a.5.5 0 0 1 .707-.707l1.414 1.415a.5.5 0 1 1-.707.707L3.386 8.854zm1.93-3.72a.5.5 0 0 1 .708 0l1.414 1.414a.5.5 0 0 1-.708.708L5.316 5.135zM13.5 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zm-2.879-.854a.5.5 0 1 1-.707.707L8.5 6.435a.5.5 0 1 1 .708-.707l1.414 1.414z"/>
-                </svg>
-                Solicitudes
-            </button>
-        </nav>
+        <!-- =========== CONTENEDOR DE PÁGINA DE SCRIPTS =========== -->
+        <div id="scripts-page-container">
+            <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-40" style="background-image: url('cafe.png'); background-color: #2c3e50;">
+                <div class="absolute inset-0 bg-blue-900 bg-opacity-50"></div>
+                <div class="relative z-10">
+                    <h1 id="script-page-title" class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Scripts</h1>
+                    <p id="script-page-slogan" class="text-lg text-gray-200 dark:text-gray-300 mt-2">Soluciones rápidas para casos de CRM en Salesforce</p>
+                </div>
+            </header>
 
-        <main id="scripts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
+            <div class="mb-8 max-w-2xl mx-auto">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <input type="text" id="search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-10 pr-4 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-yellow-500 transition" placeholder="Buscar por título o descripción...">
+                </div>
+            </div>
+
+            <nav id="category-filters" class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+                <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Todos</button>
+                <button data-category="requests" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md admin-only-flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-inbox" viewBox="0 0 16 16"><path d="M4.38 1C3.242 1 2.22 1.8 2.034 2.818L.03 10.873A1.5 1.5 0 0 0 1.5 13h13a1.5 1.5 0 0 0 1.47-2.127L13.966 2.818A2 2 0 0 0 11.62 1H4.38zM1 2.81C1.002 2.7 1 2.58 1 2.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1c0 .08-.002.199-.034.31L13.06 10.37A.5.5 0 0 1 12.5 10.5h-11a.5.5 0 0 1-.56-.37L1 2.81zm13.38 9.19-2.75-2.75a.5.5 0 0 0-.707 0L8 12.207l-1.42-1.42a.5.5 0 0 0-.707 0L3.12 13.5H1.5a.5.5 0 0 0 0 1h13a.5.5 0 0 0 0-1h-1.12z"/></svg>
+                    Solicitudes
+                    <span id="requests-count-badge" class="hidden ml-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full items-center justify-center">0</span>
+                </button>
+                <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">★ Favoritos</button>
+                <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">🔥 Populares</button>
+                <button data-category="unificacion" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Unificación/Separación</button>
+                <button data-category="exp" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Exp. y Serv.</button>
+                <button data-category="parciales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Parciales</button>
+                <button data-category="totales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Totales</button>
+                <button data-category="extras" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Extras</button>
+            </nav>
+            
+            <main id="scripts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
+        </div>
+
+        <!-- =========== CONTENEDOR DE PÁGINA DE QUERYS =========== -->
+        <div id="querys-page-container" class="hidden">
+            <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-40" style="background-image: url('cafe.png'); background-color: #2c3e50;"> <!-- Color de fallback -->
+                <div class="absolute inset-0 bg-blue-900 bg-opacity-50"></div>
+                <div class="relative z-10">
+                    <h1 id="query-page-title" class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Querys</h1>
+                    <p id="query-page-slogan" class="text-lg text-gray-200 dark:text-gray-300 mt-2">Consultas optimizadas para el análisis de datos</p>
+                </div>
+            </header>
+
+            <div id="query-search-container" class="mb-8 max-w-2xl mx-auto">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <input type="text" id="query-search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-10 pr-4 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-yellow-500 transition" placeholder="Buscar por título o descripción...">
+                </div>
+            </div>
+
+            <nav id="query-category-filters" class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+                <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Todos</button>
+                <button data-category="requests" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md admin-only-flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-inbox" viewBox="0 0 16 16"><path d="M4.38 1C3.242 1 2.22 1.8 2.034 2.818L.03 10.873A1.5 1.5 0 0 0 1.5 13h13a1.5 1.5 0 0 0 1.47-2.127L13.966 2.818A2 2 0 0 0 11.62 1H4.38zM1 2.81C1.002 2.7 1 2.58 1 2.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1c0 .08-.002.199-.034.31L13.06 10.37A.5.5 0 0 1 12.5 10.5h-11a.5.5 0 0 1-.56-.37L1 2.81zm13.38 9.19-2.75-2.75a.5.5 0 0 0-.707 0L8 12.207l-1.42-1.42a.5.5 0 0 0-.707 0L3.12 13.5H1.5a.5.5 0 0 0 0 1h13a.5.5 0 0 0 0-1h-1.12z"/></svg>
+                    Solicitudes
+                    <span id="query-requests-count-badge" class="hidden ml-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full items-center justify-center">0</span>
+                </button>
+                <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">★ Favoritos</button>
+                <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">🔥 Populares</button>
+                <button data-category="aforeglobal" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">AforeGlobal</button>
+                <button data-category="safre" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Safre</button>
+                <button data-category="notificaciones" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Notificaciones</button>
+                <button data-category="admonafore" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">AdmonAfore</button>
+                <button data-category="serviciosafore" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">ServiciosAfore</button>
+                <button data-category="extra" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Extra</button>
+                <button data-category="learn" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-book" viewBox="0 0 16 16">
+                      <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.893V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.746c-.917-.432-2.107-.773-3.287-.893-1.093-.11-2.278-.06-3.213.493V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/>
+                    </svg>
+                    Aprende SQL
+                </button>
+            </nav>
+            
+            <!-- Contenedor de las tarjetas de querys (se oculta) -->
+            <main id="querys-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
+
+            <!-- MÓDULO DE APRENDIZAJE MOVIDO AQUÍ (oculto por defecto) -->
+            <div id="sql-learning-section" class="hidden">
+                <!-- Módulo 1: Conceptos -->
+                <div class="mb-6 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+                    <h2 class="text-3xl font-bold text-blue-800 dark:text-yellow-400 mb-6">1. Conceptos Clave (¿Qué es esto?)</h2>
+                    <div class="space-y-5 text-gray-700 dark:text-gray-300">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-blue-500 shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <p><strong>¿Qué es un Query?</strong> Es simplemente una pregunta o "consulta" que le hacemos a la base de datos para que nos traiga información específica.</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-blue-500 shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                            <p><strong>¿Qué es SQL?</strong> Es el idioma que usamos para escribir esa pregunta. (Significa "Lenguaje de Consulta Estructurada").</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-green-500 shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <p><strong>La Analogía de Excel (Para entender la BD):</strong> Piensa en la base de datos como un archivo de Excel gigante.</p>
+                        </div>
+                        <div class="ml-10 p-4 border-l-2 border-gray-200 dark:border-gray-600 space-y-2">
+                            <p class="font-semibold"><strong>Servidor:</strong> Es el archivo .xlsx completo.</p>
+                            <p class="ml-4 font-semibold"><strong>Tabla:</strong> Es una hoja o pestaña (ej. "Folios").</p>
+                            <p class="ml-8 font-semibold"><strong>Valores:</strong> Son las celdas de esa hoja.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Módulo 2: Fórmula Mágica -->
+                <div class="mb-6 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+                    <h2 class="text-3xl font-bold text-blue-800 dark:text-yellow-400 mb-6">2. La Fórmula Mágica (Cómo LEER un Query)</h2>
+                    <div class="space-y-4 text-gray-700 dark:text-gray-300">
+                        <p>Casi todos los querys de consulta que usaremos se leen con esta fórmula de 3 partes. Pasa el mouse sobre las palabras clave para ver qué hacen.</p>
+                        
+                        <!-- Bloque de Código Interactivo -->
+                        <div id="interactive-sql-block" class="bg-gray-900 dark:bg-black/50 rounded-lg p-4 font-mono text-gray-300">
+                            <span data-hover-target="exp-select" class="text-pink-400 font-bold cursor-pointer hover:underline">SELECT</span>
+                            <span data-hover-target="exp-all" class_base="text-gray-300" class="text-gray-300 cursor-pointer hover:underline"> * </span>
+                            <span data-hover-target="exp-from" class="text-pink-400 font-bold cursor-pointer hover:underline">FROM</span>
+                            <span data-hover-target="exp-table" class_base="text-green-400" class="text-green-400 cursor-pointer hover:underline"> tabla_folios_salesforce</span>
+                            <br>
+                            <span data-hover-target="exp-where" class="text-pink-400 font-bold cursor-pointer hover:underline">WHERE</span>
+                            <span data-hover-target="exp-condition" class_base="text-blue-300" class="text-blue-300 cursor-pointer hover:underline"> NSS = '123456789'</span>;
+                        </div>
+                        
+                        <!-- Caja de Explicación -->
+                        <div id="sql-explanation-box" class="p-3 bg-blue-50 dark:bg-gray-700 rounded-lg text-blue-800 dark:text-blue-200 min-h-[80px] transition-all">
+                            <p id="exp-default" class="sql-explanation text-gray-500 dark:text-gray-400">Pasa el mouse sobre las partes del query para ver qué hacen.</p>
+                            <p id="exp-select" class="sql-explanation hidden font-medium"><strong>1. SELECT (El "Qué"):</strong> Elige qué columnas quieres ver. <br><code>SELECT Folio, Estatus</code> significa "Selecciona solo esas dos columnas".</p>
+                            <p id="exp-all" class="sql-explanation hidden font-medium"><strong>El Asterisco (*):</strong> Es un comodín que significa "TODO". <br><code>SELECT *</code> es la forma rápida de decir "Tráeme todas las columnas de la tabla".</p>
+                            <p id="exp-from" class="sql-explanation hidden font-medium"><strong>2. FROM (El "Dónde"):</strong> Indica de qué tabla (u 'hoja de Excel') quieres sacar los datos.</p>
+                            <p id="exp-table" class="sql-explanation hidden font-medium"><strong>Nombre de la Tabla:</strong> El lugar específico de donde vienen los datos. En tu analogía, es el nombre de la "hoja de Excel".</p>
+                            <p id="exp-where" class="sql-explanation hidden font-medium"><strong>3. WHERE (El "Filtro"):</strong> La condición para filtrar. ¡Esta es la parte más importante para el diagnóstico!</p>
+                            <p id="exp-condition" class="sql-explanation hidden font-medium"><strong>La Condición:</strong> La regla que deben cumplir las filas para ser seleccionadas. <br>Ej: <code>NSS = '123456789'</code> o <code>Numero_del_caso = '00654321'</code>.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Módulo 3: Trucos -->
+                <div class="mb-6 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+                    <h2 class="text-3xl font-bold text-blue-800 dark:text-yellow-400 mb-6">3. "Trucos" y Filtros Comunes (Para ir más rápido)</h2>
+                    <div class="space-y-6 text-gray-700 dark:text-gray-300">
+                        
+                        <div>
+                            <p class="mb-1"><strong><code class="code-pill">AND</code> y <code class="code-pill">OR</code> (Combinar filtros)</strong></p>
+                            <p class="mb-2 text-sm">Usa <code class="code-pill">AND</code> para que se cumplan dos o más condiciones. Usa <code class="code-pill">OR</code> para que se cumpla al menos una.</p>
+                            <pre class="bg-gray-900 dark:bg-black/50 p-2 rounded-md font-mono text-xs text-gray-300">... WHERE Estatus = 'Espera Interna' <span class="text-pink-400">AND</span> Dependencia = 'IMSS'</pre>
+                        </div>
+
+                        <div>
+                            <p class="mb-1"><strong><code class="code-pill">LIKE</code> (Buscar texto)</strong></p>
+                            <p class="mb-2 text-sm">Perfecto para buscar en la columna <code>Descripción</code> cuando no sabes el texto exacto. El <code>%</code> es un comodín (significa "cualquier cosa").</p>
+                            <pre class="bg-gray-900 dark:bg-black/50 p-2 rounded-md font-mono text-xs text-gray-300">... WHERE Descripcion <span class="text-pink-400">LIKE</span> '%Homologacion%'</pre>
+                        </div>
+
+                        <div>
+                            <p class="mb-1"><strong><code class="code-pill">COUNT</code> (Contar resultados)</strong></p>
+                            <p class="mb-2 text-sm">En lugar de traerte todas las filas, solo te dice cuántas hay. Es más rápido.</p>
+                            <pre class="bg-gray-900 dark:bg-black/50 p-2 rounded-md font-mono text-xs text-gray-300"><span class="text-pink-400">SELECT COUNT(*) FROM</span> tabla_folios <span class="text-pink-400">WHERE</span> Estatus = 'Espera Interna'</pre>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 rounded-r-lg">
+                            <svg class="w-8 h-8 sm:w-6 sm:h-6 text-red-500 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.332-.21 3.031-1.742 3.031H4.42c-1.532 0-2.492-1.699-1.742-3.031l5.58-9.92zM10 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                            <div>
+                                <p class="font-bold text-red-800 dark:text-red-200"><code class="code-pill !bg-red-100 !text-red-800 dark:!bg-red-900 dark:!text-red-200">LIMIT</code> (Comando de seguridad) ¡MUY IMPORTANTE!</p>
+                                <p class="text-red-700 dark:text-red-200 text-sm mt-1">Úsalo siempre para no saturar el sistema. Te trae solo los primeros 'X' resultados.</p>
+                                <pre class="bg-gray-900 dark:bg-black/50 p-2 rounded-md font-mono text-xs text-gray-300 mt-2">... WHERE Estatus = 'Espera Interna' <span class="text-pink-400">LIMIT</span> 10</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- Fin de sql-learning-section -->
+
+        </div> <!-- Fin de querys-page-container -->
         
-        <div id="loading-indicator" class="text-center py-10"><p class="text-gray-500 dark:text-gray-400">Cargando scripts desde la nube...</p></div>
+        <div id="loading-indicator" class="text-center py-10"><p class="text-gray-500 dark:text-gray-400">Cargando datos...</p></div>
     </div>
 
     <footer class="text-center py-8 border-t border-gray-200 dark:border-gray-700">
@@ -118,18 +294,21 @@
         </p>
     </footer>
 
-    <button id="add-script-btn" class="admin-only-flex fixed bottom-8 right-8 bg-blue-700 dark:bg-yellow-400 text-white dark:text-blue-900 w-16 h-16 rounded-full shadow-lg items-center justify-center text-3xl font-bold transform hover:scale-110 transition-transform">+</button>
+    <button id="add-item-btn" class="admin-only-flex fixed bottom-8 right-8 bg-blue-700 dark:bg-yellow-400 text-white dark:text-blue-900 w-16 h-16 rounded-full shadow-lg items-center justify-center text-3xl font-bold transform hover:scale-110 transition-transform">+</button>
 
-    <div id="add-script-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+    <!-- Modal Genérico para Agregar/Editar Items -->
+    <div id="add-item-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
-            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Agregar Nuevo Script</h2>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Agregar Nuevo</h2>
             <form id="script-form">
-                <input type="hidden" id="script-id">
+                <input type="hidden" id="item-id">
                 <div class="space-y-4">
-                    <input type="text" id="script-title" placeholder="Título del Script" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500">
-                    <textarea id="script-description" placeholder="Descripción breve" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="2"></textarea>
-                    <textarea id="script-text" placeholder="Texto completo del script..." required class="w-full p-2 border rounded font-mono dark:bg-gray-700 dark:border-gray-600" rows="6"></textarea>
-                    <select id="script-category" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="text" id="item-title" placeholder="Título" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500">
+                    <textarea id="item-description" placeholder="Descripción breve" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="2"></textarea>
+                    <textarea id="item-text" placeholder="Texto completo del script/query..." required class="w-full p-2 border rounded font-mono dark:bg-gray-700 dark:border-gray-600" rows="6"></textarea>
+                    
+                    <!-- Categorías para SCRIPTS -->
+                    <select id="item-category-script" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                         <option value="">-- Seleccionar Categoría --</option>
                         <option value="unificacion">Unificación/Separación</option>
                         <option value="exp">Exp. y Serv.</option>
@@ -137,11 +316,23 @@
                         <option value="totales">Retiros Totales</option>
                         <option value="extras">Extras</option>
                     </select>
-                    <input type="text" id="script-variables" placeholder="Variables (separadas por coma, ej: FECHA, MONTO)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    
+                    <!-- Categorías para QUERYS -->
+                    <select id="item-category-query" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">-- Seleccionar Servidor --</option>
+                        <option value="aforeglobal">AforeGlobal</option>
+                        <option value="safre">Safre</option>
+                        <option value="notificaciones">Notificaciones</option>
+                        <option value="admonafore">AdmonAfore</option>
+                        <option value="serviciosafore">ServiciosAfore</option>
+                        <option value="extra">Extra</option>
+                    </select>
+
+                    <input type="text" id="item-variables" placeholder="Variables (separadas por coma, ej: FECHA, MONTO)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                 </div>
                 <div class="mt-6 flex justify-end gap-4">
                     <button type="button" id="cancel-btn" class="py-2 px-4 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancelar</button>
-                    <button type="submit" class="py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Guardar Script</button>
+                    <button type="submit" class="py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Guardar</button>
                 </div>
             </form>
              <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
@@ -151,7 +342,7 @@
     <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
             <h2 class="text-xl font-bold mb-4">¿Estás seguro?</h2>
-            <p class="text-gray-600 dark:text-gray-300 mb-6">Esta acción no se puede deshacer.</p>
+            <p id="delete-modal-text" class="text-gray-600 dark:text-gray-300 mb-6">Esta acción no se puede deshacer.</p>
             <div class="flex justify-center gap-4">
                 <button id="cancel-delete-btn" class="py-2 px-6 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">No</button>
                 <button id="confirm-delete-btn" class="py-2 px-6 rounded bg-red-600 text-white hover:bg-red-700">Sí, Eliminar</button>
@@ -159,14 +350,11 @@
         </div>
     </div>
 
-    <!-- [NUEVO] Modal de Información (para confirmar envío) -->
     <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
             <h2 id="info-modal-title" class="text-xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Solicitud Enviada</h2>
-            <p id="info-modal-message" class="text-gray-600 dark:text-gray-300 mb-6">Tu solicitud ha sido enviada al Super Administrador para su aprobación.</p>
-            <div class="flex justify-center gap-4">
-                <button id="info-modal-close-btn" class="py-2 px-6 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Entendido</button>
-            </div>
+            <p id="info-modal-text" class="text-gray-600 dark:text-gray-300 mb-6">Tu solicitud ha sido enviada al Super Administrador para aprobación.</p>
+            <button id="info-modal-close" class="py-2 px-6 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Entendido</button>
         </div>
     </div>
 
@@ -188,13 +376,12 @@
     </div>
     
     <script type="module">
-        // --- IMPORTS DE FIREBASE (CON NUEVAS FUNCIONES) ---
-        // Usamos la versión 9.15.0 que tenías, pero añadimos getDoc y serverTimestamp
+        // --- IMPORTS DE FIREBASE (PRODUCCIÓN) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         
-        // --- TU CONFIGURACIÓN ORIGINAL DE FIREBASE (PARA GITHUB) ---
+        // --- CONFIGURACIÓN DE PRODUCCIÓN (TU CÓDIGO ORIGINAL) ---
         const firebaseConfig = {
           apiKey: "AIzaSyAvq0CF94lVwGZAtXiFZKHwS5q4ZA489lM",
           authDomain: "scripts-une-gap.firebaseapp.com",
@@ -205,44 +392,80 @@
           measurementId: "G-GJK53TR2D6"
         };
 
-        // --- INICIALIZACIÓN DE FIREBASE (TU CÓDIGO ORIGINAL) ---
+        // --- INICIALIZACIÓN DE FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        // setLogLevel('Debug'); // Descomentar para depurar en producción
 
-        // --- DEFINICIÓN DE COLECCIONES (RUTAS DE PRODUCCIÓN) ---
+        // --- DEFINICIÓN DE COLECCIONES (PRODUCCIÓN) ---
         const scriptsCollection = collection(db, 'scripts');
-        const requestsCollection = collection(db, 'solicitudes'); // NUEVA
-        const userRolesCollection = collection(db, 'user_roles'); // NUEVA
+        const requestsCollection = collection(db, 'solicitudes');
+        const querysCollection = collection(db, 'querys');
+        const queryRequestsCollection = collection(db, 'solicitudes_querys');
+        const userRolesCollection = collection(db, 'user_roles');
 
-        // --- VARIABLES GLOBALES DE LA APLICACIÓN (MERGE) ---
-        let allScripts = [];
-        const container = document.getElementById('scripts-container');
-        const filters = document.getElementById('category-filters');
-        const searchInput = document.getElementById('search-input');
-        const loadingIndicator = document.getElementById('loading-indicator');
+        // --- ESTADO GLOBAL DE LA APLICACIÓN ---
+        let currentView = 'scripts'; // 'scripts' o 'querys'
+        let currentUserRole = null;
+        let userId = null;
         let favorites = JSON.parse(localStorage.getItem('favoriteScripts')) || [];
-        const authControls = document.getElementById('auth-controls');
+        let queryFavorites = JSON.parse(localStorage.getItem('favoriteQuerys')) || []; // Favoritos para Querys
         const copiedScripts = new Set();
-        
-        let currentUserRole = null; // NUEVA
-        let pendingRequests = []; // NUEVA
+        const copiedQuerys = new Set(); // Copiados para Querys
 
-        // --- FUNCIÓN PARA MOSTRAR LAS TARJETAS (RENDER) ---
+        // --- ESTADO DE SCRIPTS ---
+        let allScripts = [];
+        let pendingRequests = [];
+        let unsubscribeScripts = null;
+        let unsubscribeRequests = null;
+
+        // --- ESTADO DE QUERYS ---
+        let allQuerys = [];
+        let pendingQueryRequests = [];
+        let unsubscribeQuerys = null;
+        let unsubscribeQueryRequests = null;
+
+        // --- ELEMENTOS DOM (SCRIPTS) ---
+        const scriptsPage = document.getElementById('scripts-page-container');
+        const scriptsContainer = document.getElementById('scripts-container');
+        const scriptFilters = document.getElementById('category-filters');
+        const scriptSearchInput = document.getElementById('search-input');
+        
+        // --- ELEMENTOS DOM (QUERYS) ---
+        const querysPage = document.getElementById('querys-page-container');
+        const querysContainer = document.getElementById('querys-container');
+        const queryFilters = document.getElementById('query-category-filters');
+        const querySearchInput = document.getElementById('query-search-input');
+        const querySearchContainer = document.getElementById('query-search-container'); // Contenedor de la barra de búsqueda
+        
+        // --- ELEMENTOS DOM (NUEVA PÁGINA) ---
+        const learningSection = document.getElementById('sql-learning-section');
+        
+        // --- ELEMENTOS DOM (GLOBALES) ---
+        const mainNav = document.getElementById('main-nav');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const authControls = document.getElementById('auth-controls');
+
+        // --- ============================================ ---
+        // --- FUNCIONES DE RENDERIZADO (SCRIPTS)           ---
+        // --- ============================================ ---
+
         const renderScripts = (scriptsToRender) => {
-            container.innerHTML = '';
+            if(!scriptsContainer) return;
+            scriptsContainer.innerHTML = '';
             if (scriptsToRender.length === 0 && loadingIndicator.style.display === 'none') {
-                container.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
+                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
                 return;
             }
 
-            const activeCategory = filters.querySelector('.active').dataset.category;
+            const activeCategory = scriptFilters.querySelector('.active').dataset.category;
             const isPopularView = activeCategory === 'popular';
             
             scriptsToRender.forEach((script, index) => {
                 const isFavorite = favorites.includes(script.id);
                 const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col script-card-enter';
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col card-enter';
                 card.style.animationDelay = `${index * 50}ms`;
                 
                 let variablesHtml = '';
@@ -267,40 +490,40 @@
                             <button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
                             </button>
-                            <div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden">
+                            <div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden z-20">
                                 <a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Modificar</a>
                                 <a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50">Eliminar</a>
                             </div>
                         </div>`;
 
                 card.innerHTML = `
-                        ${adminOptionsHtml}
-                        ${popularBadgeHtml}
-                        <div class="p-6 flex-grow">
-                            <div class="flex justify-between items-start">
-                                <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${script.title}</h2>
-                                <button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors" data-id="${script.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="pointer-events-none transition-colors duration-200 ${isFavorite ? 'text-yellow-400' : 'text-gray-400/60 hover:text-yellow-400'}" viewBox="0 0 16 16">
-                                        <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${script.description}</p>
-                            <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
-                                <pre class="script-content font-sans">${script.scriptText}</pre>
-                            </div>
-                            ${variablesHtml}
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
-                            <button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ease-in-out hover:bg-yellow-500 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
-                                <span>Copiar Script</span>
-                            </button>
-                        </div>
-                    </div>
+                             ${adminOptionsHtml}
+                             ${popularBadgeHtml}
+                             <div class="p-6 flex-grow">
+                                 <div class="flex justify-between items-start">
+                                     <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${script.title}</h2>
+                                     <button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors" data-id="${script.id}">
+                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="pointer-events-none transition-colors duration-200 ${isFavorite ? 'text-yellow-400' : 'text-gray-400/60 hover:text-yellow-400'}" viewBox="0 0 16 16">
+                                             <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                                         </svg>
+                                     </button>
+                                 </div>
+                                 <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${script.description}</p>
+                                 <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                                     <pre class="script-content font-sans">${script.scriptText}</pre>
+                                 </div>
+                                 ${variablesHtml}
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
+                                 <button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ease-in-out hover:bg-yellow-500 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                                     <span>Copiar Script</span>
+                                 </button>
+                             </div>
                 `;
                 card.dataset.id = script.id;
-                container.appendChild(card);
+                card.dataset.type = 'script';
+                scriptsContainer.appendChild(card);
 
                 // Revisa si el script recién renderizado debe estar en estado "copiado"
                 if (copiedScripts.has(script.id)) {
@@ -315,250 +538,405 @@
             });
         };
 
-        // [NUEVA] Función para mostrar las tarjetas de Solicitudes Pendientes
         const renderPendingRequests = (requests) => {
-            container.innerHTML = '';
+            if(!scriptsContainer) return;
+            scriptsContainer.innerHTML = '';
             if (requests.length === 0) {
-                container.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                return;
+            }
+            requests.forEach(request => {
+                const req = request.data;
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+                
+                let actionText = '';
+                let actionColor = '';
+                if (req.action === 'add') { actionText = 'NUEVO'; actionColor = 'bg-blue-500'; }
+                if (req.action === 'edit') { actionText = 'MODIFICADO'; actionColor = 'bg-yellow-500'; }
+                if (req.action === 'delete') { actionText = 'ELIMINAR'; actionColor = 'bg-red-500'; }
+
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                            <pre class="script-content font-sans">${req.scriptText}</pre>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
+                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
+                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
+        };
+
+        // --- ============================================ ---
+        // --- FUNCIONES DE RENDERIZADO (QUERYS)            ---
+        // --- ============================================ ---
+
+        const renderQuerys = (querysToRender) => {
+            if(!querysContainer) return;
+            querysContainer.innerHTML = '';
+            if (querysToRender.length === 0 && loadingIndicator.style.display === 'none') {
+                querysContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
                 return;
             }
 
-            requests.forEach((req, index) => {
+            const activeCategory = queryFilters.querySelector('.active').dataset.category;
+            const isPopularView = activeCategory === 'popular';
+            
+            querysToRender.forEach((query, index) => {
+                const isFavorite = queryFavorites.includes(query.id);
                 const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col script-card-enter';
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col card-enter';
                 card.style.animationDelay = `${index * 50}ms`;
                 
-                let actionText = '';
-                let bgColor = 'bg-gray-100 dark:bg-gray-900/50';
-                let title = req.scriptData.title;
-
-                switch(req.action) {
-                    case 'create':
-                        actionText = 'CREAR NUEVO SCRIPT';
-                        bgColor = 'bg-blue-100 dark:bg-blue-900/30';
-                        break;
-                    case 'update':
-                        actionText = 'ACTUALIZAR SCRIPT';
-                        bgColor = 'bg-yellow-100 dark:bg-yellow-900/30';
-                        break;
-                    case 'delete':
-                        actionText = 'ELIMINAR SCRIPT';
-                        bgColor = 'bg-red-100 dark:bg-red-900/30';
-                        title = `<span class="line-through">${title}</span>`;
-                        break;
+                let popularBadgeHtml = '';
+                if (isPopularView) {
+                    const usageCount = query.copyCount || 0;
+                    popularBadgeHtml = `<div class="absolute top-3 right-20 flex items-center gap-1 text-xs bg-red-100 text-red-800 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full font-semibold">🔥<span>${usageCount}</span></div>`;
                 }
+                
+                let adminOptionsHtml = `
+                        <div class="admin-only-flex absolute top-2 right-10 z-10">
+                            <button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
+                            </button>
+                            <div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden z-20">
+                                <a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Modificar</a>
+                                <a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50">Eliminar</a>
+                            </div>
+                        </div>`;
 
                 card.innerHTML = `
-                    <div class="p-6 flex-grow">
-                        <div class="mb-2">
-                            <span class="text-xs font-bold ${bgColor} p-1 rounded">${actionText}</span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400 float-right">Por: ${req.requestedBy || 'Admin'}</span>
+                             ${adminOptionsHtml}
+                             ${popularBadgeHtml}
+                             <div class="p-6 flex-grow">
+                                 <div class="flex justify-between items-start">
+                                     <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${query.title}</h2>
+                                     <button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors" data-id="${query.id}">
+                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="pointer-events-none transition-colors duration-200 ${isFavorite ? 'text-yellow-400' : 'text-gray-400/60 hover:text-yellow-400'}" viewBox="0 0 16 16">
+                                             <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                                         </svg>
+                                     </button>
+                                 </div>
+                                 <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${query.description}</p>
+                                 <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-32 overflow-y-auto">
+                                     <pre class="script-content font-mono">${query.scriptText}</pre>
+                                 </div>
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
+                                 <button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ease-in-out hover:bg-yellow-500 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                                     <span>Copiar Query</span>
+                                 </button>
+                             </div>
+                `;
+                card.dataset.id = query.id;
+                card.dataset.type = 'query';
+                querysContainer.appendChild(card);
+
+                if (copiedQuerys.has(query.id)) {
+                    const copyBtn = card.querySelector('.copy-btn');
+                    if (copyBtn) {
+                        copyBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022z"/></svg>
+                            <span>¡Copiado!</span>`;
+                        copyBtn.classList.add('copied');
+                    }
+                }
+            });
+        };
+
+        const renderPendingQueryRequests = (requests) => {
+            if(!querysContainer) return;
+            querysContainer.innerHTML = '';
+            if (requests.length === 0) {
+                querysContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                return;
+            }
+            requests.forEach(request => {
+                const req = request.data;
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+                
+                let actionText = '';
+                let actionColor = '';
+                if (req.action === 'add') { actionText = 'NUEVO'; actionColor = 'bg-blue-500'; }
+                if (req.action === 'edit') { actionText = 'MODIFICADO'; actionColor = 'bg-yellow-500'; }
+                if (req.action === 'delete') { actionText = 'ELIMINAR'; actionColor = 'bg-red-500'; }
+
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                            <pre class="script-content font-sans">${req.scriptText}</pre>
                         </div>
-                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-5">${title}</h2>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.scriptData.description}</p>
-                        
-                        <!-- Mostramos los datos viejos vs los nuevos si es una actualización -->
-                        ${req.action === 'update' ? `
-                            <h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">Datos Anteriores:</h4>
-                            <pre class="script-content font-sans bg-red-50 dark:bg-red-900/20 p-2 rounded text-xs max-h-24 overflow-y-auto mb-2">${allScripts.find(s => s.id === req.scriptId)?.scriptText || 'No se encontraron datos anteriores.'}</pre>
-                            <h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">Datos Nuevos:</h4>
-                            <pre class="script-content font-sans bg-green-50 dark:bg-green-900/20 p-2 rounded text-xs max-h-24 overflow-y-auto">${req.scriptData.scriptText}</pre>
-                        ` : `
-                            <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
-                                <pre class="script-content font-sans">${req.scriptData.scriptText}</pre>
-                            </div>
-                        `}
                     </div>
-                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex gap-2">
-                        <button class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 hover:bg-red-700">
-                            Rechazar
-                        </button>
-                        <button class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 hover:bg-green-700">
-                            Aprobar
-                        </button>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
+                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
+                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
                     </div>
                 `;
-                card.dataset.id = req.id; // ID de la *solicitud*
-                card.dataset.scriptId = req.scriptId; // ID del *script* (para updates/deletes)
-                card.dataset.action = req.action;
-                
-                container.appendChild(card);
+                querysContainer.appendChild(card);
             });
         };
         
-        // --- FUNCIÓN CENTRAL PARA APLICAR FILTROS Y BÚSQUEDA (MODIFICADA) ---
-        const applyFilters = () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const activeCategory = filters.querySelector('.active').dataset.category;
-            
-            // [NUEVO] Manejamos la nueva categoría 'pending'
-            if (activeCategory === 'pending') {
-                // Filtramos las solicitudes pendientes por término de búsqueda
-                const filteredRequests = pendingRequests.filter(s => 
-                    s.scriptData.title.toLowerCase().includes(searchTerm) || 
-                    s.scriptData.description.toLowerCase().includes(searchTerm)
-                );
-                renderPendingRequests(filteredRequests);
-                return; // Importante: Salimos aquí
-            }
+        // --- ============================================ ---
+        // --- LÓGICA DE FILTROS Y NAVEGACIÓN               ---
+        // --- ============================================ ---
+        
+        const applyScriptFilters = () => {
+            if (!scriptSearchInput || !scriptFilters) { console.warn("Elementos de filtro de script no encontrados."); return; }
+            const searchTerm = scriptSearchInput.value.toLowerCase();
+            const activeCategory = scriptFilters.querySelector('.active').dataset.category;
 
-            let filteredScripts = allScripts;
-            if (activeCategory === 'favorites') {
+            let filteredScripts = [];
+            
+            if (activeCategory === 'requests') {
+                filteredScripts = pendingRequests;
+                renderPendingRequests(filteredScripts);
+                return;
+            } else if (activeCategory === 'favorites') {
                 filteredScripts = allScripts.filter(script => favorites.includes(script.id));
             } else if (activeCategory === 'popular') {
                 filteredScripts = [...allScripts].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
             } else if (activeCategory !== 'all') {
                 filteredScripts = allScripts.filter(script => script.category === activeCategory);
+            } else {
+                filteredScripts = allScripts;
             }
+            
             if (searchTerm) {
                 filteredScripts = filteredScripts.filter(s => s.title.toLowerCase().includes(searchTerm) || s.description.toLowerCase().includes(searchTerm));
             }
             renderScripts(filteredScripts);
         };
 
-        // [NUEVA] Función para mostrar/ocultar UI de admin
-        const setupAdminUI = (role) => {
-            const pendingBtn = document.getElementById('pending-requests-btn');
-            const addScriptBtn = document.getElementById('add-script-btn');
+        const applyQueryFilters = () => {
+            if (!querySearchInput || !queryFilters) { console.warn("Elementos de filtro de query no encontrados."); return; }
+            const searchTerm = querySearchInput.value.toLowerCase();
+            const activeCategory = queryFilters.querySelector('.active').dataset.category;
 
-            if (role === 'superadmin') {
-                pendingBtn.style.display = 'flex';
-                addScriptBtn.style.display = 'flex'; // Super admin puede añadir
-                document.body.classList.add('admin-mode');
-            } else if (role === 'admin') {
-                pendingBtn.style.display = 'none';
-                addScriptBtn.style.display = 'flex'; // Admin simple puede añadir (para solicitar)
-                document.body.classList.add('admin-mode');
+            let filteredQuerys = [];
+
+            if (activeCategory === 'requests') {
+                filteredQuerys = pendingQueryRequests;
+                renderPendingQueryRequests(filteredQuerys);
+                return;
+            } else if (activeCategory === 'favorites') {
+                filteredQuerys = allQuerys.filter(query => queryFavorites.includes(query.id));
+            } else if (activeCategory === 'popular') {
+                filteredQuerys = [...allQuerys].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
+            } else if (activeCategory !== 'all') {
+                filteredQuerys = allQuerys.filter(query => query.category === activeCategory);
             } else {
-                pendingBtn.style.display = 'none';
-                addScriptBtn.style.display = 'none';
-                document.body.classList.remove('admin-mode');
+                filteredQuerys = allQuerys;
+            }
+            
+            if (searchTerm) {
+                filteredQuerys = filteredQuerys.filter(q => q.title.toLowerCase().includes(searchTerm) || q.description.toLowerCase().includes(searchTerm));
+            }
+            renderQuerys(filteredQuerys);
+        };
+
+        const navigateTo = (view) => {
+            currentView = view;
+            
+            if (view === 'scripts') {
+                scriptsPage.classList.remove('hidden');
+                querysPage.classList.add('hidden');
+                mainNav.querySelector('[data-view="scripts"]').classList.add('active');
+                mainNav.querySelector('[data-view="querys"]').classList.remove('active');
+                applyScriptFilters();
+            } else if (view === 'querys') {
+                scriptsPage.classList.add('hidden');
+                querysPage.classList.remove('hidden');
+                mainNav.querySelector('[data-view="scripts"]').classList.remove('active');
+                mainNav.querySelector('[data-view="querys"]').classList.add('active');
+                
+                const activeQueryFilter = queryFilters.querySelector('.active').dataset.category;
+                if (activeQueryFilter === 'learn') {
+                    if(querysContainer) querysContainer.classList.add('hidden');
+                    if(learningSection) learningSection.classList.remove('hidden');
+                    if(querySearchContainer) querySearchContainer.classList.add('hidden');
+                } else {
+                    applyQueryFilters();
+                }
             }
         };
 
-        // --- MANEJO DE AUTENTICACIÓN Y DATOS ---
-        
-        // Listener de scripts (original, para acceso público)
-        onSnapshot(scriptsCollection, (snapshot) => {
-            allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            loadingIndicator.style.display = 'none';
-            applyFilters();
-        }, (error) => {
-            console.error("Error al obtener los datos de Firebase: ", error);
-            loadingIndicator.innerHTML = '<p class="text-red-500">Error de conexión con la base de datos.</p>';
+        if(mainNav) mainNav.addEventListener('click', (e) => {
+            const button = e.target.closest('.main-nav-btn');
+            if (button) {
+                const view = button.dataset.view;
+                navigateTo(view);
+            }
         });
-        
-        let unsubscribeRequests = null; // Listener de solicitudes
 
-        // Listener de autenticación (modificado para roles)
-        onAuthStateChanged(auth, async (user) => {
-            
-            // Limpiar listener de solicitudes si existe
+        // --- ============================================ ---
+        // --- LÓGICA DE FIREBASE Y AUTENTICACIÓN           ---
+        // --- ============================================ ---
+
+        const setupAdminUI = (role) => {
+            if (role) {
+                document.body.classList.add('admin-mode');
+            } else {
+                document.body.classList.remove('admin-mode');
+            }
+            document.querySelectorAll('[data-category="requests"]').forEach(btn => {
+                if (role === 'superadmin') {
+                    btn.style.display = 'flex';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+        };
+
+        const setupFirestoreListeners = () => {
+            // Limpiar listeners anteriores
+            if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeRequests) unsubscribeRequests();
-            currentUserRole = null; // Reseteamos el rol
+            if (unsubscribeQuerys) unsubscribeQuerys();
+            if (unsubscribeQueryRequests) unsubscribeQueryRequests();
+
+            // Listener de SCRIPTS
+            unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
+                allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (currentView === 'scripts') applyScriptFilters();
+                if(currentView === 'scripts' || allQuerys.length > 0 || (currentView === 'querys' && queryFilters.querySelector('.active').dataset.category === 'learn')) loadingIndicator.style.display = 'none';
+            }, (error) => {
+                console.error("Error al obtener scripts: ", error);
+                loadingIndicator.innerHTML = '<p class="text-red-500">Error al cargar scripts.</p>';
+            });
+
+            // Listener de QUERYS
+            unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
+                allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (currentView === 'querys') applyQueryFilters();
+                if(currentView === 'querys' || allScripts.length > 0) loadingIndicator.style.display = 'none';
+            }, (error) => {
+                console.error("Error al obtener querys: ", error);
+                loadingIndicator.innerHTML = '<p class="text-red-500">Error al cargar querys.</p>';
+            });
+
+            // Si es superadmin, escuchar ambas colecciones de solicitudes
+            if (currentUserRole === 'superadmin') {
+                unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
+                    pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+                    const badge = document.getElementById('requests-count-badge');
+                    if (badge) {
+                        badge.textContent = pendingRequests.length;
+                        badge.classList.toggle('hidden', pendingRequests.length === 0);
+                    }
+                    if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
+                        renderPendingRequests(pendingRequests);
+                    }
+                });
+
+                unsubscribeQueryRequests = onSnapshot(queryRequestsCollection, (snapshot) => {
+                    pendingQueryRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+                    const badge = document.getElementById('query-requests-count-badge');
+                    if (badge) {
+                        badge.textContent = pendingQueryRequests.length;
+                        badge.classList.toggle('hidden', pendingQueryRequests.length === 0);
+                    }
+                    if (currentView === 'querys' && queryFilters.querySelector('.active').dataset.category === 'requests') {
+                        renderPendingQueryRequests(pendingQueryRequests);
+                    }
+                });
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (unsubscribeScripts) unsubscribeScripts();
+            if (unsubscribeRequests) unsubscribeRequests();
+            if (unsubscribeQuerys) unsubscribeQuerys();
+            if (unsubscribeQueryRequests) unsubscribeQueryRequests();
+            
+            currentUserRole = null;
+            userId = user ? user.uid : null;
             
             if (user) {
-                // --- USUARIO ESTÁ LOGUEADO ---
-                
-                // NUEVO: Buscamos su rol
                 try {
                     const roleDocRef = doc(userRolesCollection, user.uid);
                     const roleDocSnap = await getDoc(roleDocRef);
-                    
                     if (roleDocSnap.exists()) {
-                        currentUserRole = roleDocSnap.data().role; // 'superadmin' or 'admin'
-                        console.log("Rol de usuario:", currentUserRole);
-                    } else {
-                        console.log("Usuario logueado pero sin rol asignado.");
+                        currentUserRole = roleDocSnap.data().role;
                     }
                 } catch (e) {
                     console.error("Error al obtener el rol del usuario: ", e);
                 }
 
-                // Lógica de UI (original)
                 authControls.innerHTML = `<button id="logout-btn" class="text-sm text-gray-500 hover:text-blue-700 dark:hover:text-yellow-400">Salir</button>`;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                
-                // NUEVO: Mostramos UI de admin según el rol
+                if(document.getElementById('logout-btn')) document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
                 setupAdminUI(currentUserRole);
 
-                // NUEVO: Si es superadmin, escuchamos las solicitudes
-                if (currentUserRole === 'superadmin') {
-                    unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
-                        pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        // Actualizamos el contador del botón
-                        const pendingBtn = document.getElementById('pending-requests-btn');
-                        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zM5.89.022A8 8 0 0 1 8 0v1a7 7 0 0 0-2.11.997l-.074-.997zM8 4a.5.5 0 0 1 .5.5v3.293l2.146 2.147a.5.5 0 0 1-.708.708L8 8.207V4.5A.5.5 0 0 1 8 4z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/><path d="M.5 8a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 .5 8zm2.879.854a.5.5 0 0 1 .707-.707l1.414 1.415a.5.5 0 1 1-.707.707L3.386 8.854zm1.93-3.72a.5.5 0 0 1 .708 0l1.414 1.414a.5.5 0 0 1-.708.708L5.316 5.135zM13.5 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zm-2.879-.854a.5.5 0 1 1-.707.707L8.5 6.435a.5.5 0 1 1 .708-.707l1.414 1.414z"/></svg>`;
-                        
-                        if(pendingRequests.length > 0) {
-                            pendingBtn.innerHTML = `${svgIcon} Solicitudes (${pendingRequests.length})`;
-                        } else {
-                            pendingBtn.innerHTML = `${svgIcon} Solicitudes`;
-                        }
-                        
-                        // Si estábamos en la vista de pendientes, la actualizamos
-                        if (filters.querySelector('.active').dataset.category === 'pending') {
-                            applyFilters();
-                        }
-                    }, (error) => {
-                        console.error("Error al obtener solicitudes: ", error);
-                    });
-                }
-
-            } else {
-                // --- USUARIO ESTÁ LOGUEADO ---
-                
-                // Lógica de UI (original)
-                document.body.classList.remove('admin-mode');
-                authControls.innerHTML = `<button id="login-btn" title="Acceso Admin" class="p-1 rounded-full text-blue-600 dark:text-yellow-400 hover:text-blue-800 dark:hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg></button>`;
-                document.getElementById('login-btn').addEventListener('click', openLoginModal);
-                
-                // NUEVO: Limpiamos UI de admin y datos
-                setupAdminUI(null);
-                pendingRequests = [];
-            }
+                setupFirestoreListeners();
+                navigateTo(currentView);
             
-            // Lógica original: refrescar la vista
-            applyFilters();
+            } else {
+                setupAdminUI(null);
+                authControls.innerHTML = `<button id="login-btn" title="Acceso Admin" class="p-1 rounded-full text-blue-600 dark:text-yellow-400 hover:text-blue-800 dark:hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg></button>`;
+                if(document.getElementById('login-btn')) document.getElementById('login-btn').addEventListener('click', openLoginModal);
+                
+                loadingIndicator.style.display = 'none';
+                if(scriptsContainer) scriptsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">Bienvenido. Inicia sesión para ver el contenido.</p>';
+                if(querysContainer) querysContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">Bienvenido. Inicia sesión para ver el contenido.</p>';
+            }
         });
+    
+        // --- ============================================ ---
+        // --- LÓGICA DE EVENTOS DE UI (GENERAL)            ---
+        // --- ============================================ ---
 
-        // --- LÓGICA DE EVENTOS DE UI (MODIFICADA PARA ROLES) ---
-        container.addEventListener('click', async function(e) {
+        document.getElementById('app-container').addEventListener('click', async function(e) {
+            const card = e.target.closest('[data-id]');
+            // Salir si se hizo clic en el módulo de aprendizaje o si no se hizo clic en una tarjeta
+            if (e.target.closest('#sql-learning-section') || !card) return;
+
+            const cardId = card.dataset.id;
+            const cardType = card.dataset.type; // 'script' o 'query'
+            
             const copyButton = e.target.closest('.copy-btn');
             const favButton = e.target.closest('.favorite-btn');
             const optionsButton = e.target.closest('.options-btn');
             const editButton = e.target.closest('.edit-btn');
             const deleteButton = e.target.closest('.delete-btn');
-            
-            // [NUEVO] Lógica para botones de Super Admin
             const approveButton = e.target.closest('.approve-btn');
             const rejectButton = e.target.closest('.reject-btn');
 
-            if (copyButton) {
-                const card = copyButton.closest('.relative');
-                const scriptId = card.dataset.id;
+            // --- Lógica de Copiar ---
+            if (copyButton && (cardType === 'script' || cardType === 'query')) {
+                const currentSet = cardType === 'script' ? copiedScripts : copiedQuerys;
+                const renderFunc = cardType === 'script' ? applyScriptFilters : applyQueryFilters;
+                const collection = cardType === 'script' ? scriptsCollection : querysCollection;
                 
-                if (copiedScripts.has(scriptId)) return;
+                if (currentSet.has(cardId)) return;
 
                 let scriptTextToCopy = card.querySelector('.script-content').textContent;
-                const variableInputs = card.querySelectorAll('.variable-input');
-
-                if (variableInputs.length > 0) {
-                    variableInputs.forEach(input => {
-                        const varName = input.dataset.variableName;
-                        const varValue = input.value || `[${varName}]`; // Si está vacío, mantiene el placeholder
-                        // Usamos una RegExp más segura para evitar reemplazar partes de palabras
-                        const regex = new RegExp(varName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-                        scriptTextToCopy = scriptTextToCopy.replace(regex, varValue);
-                    });
+                
+                if (cardType === 'script') {
+                    const variableInputs = card.querySelectorAll('.variable-input');
+                    if (variableInputs.length > 0) {
+                        variableInputs.forEach(input => {
+                            const varName = input.dataset.variableName;
+                            const varValue = input.value || `[${varName}]`;
+                            const regex = new RegExp(varName, 'g');
+                            scriptTextToCopy = scriptTextToCopy.replace(regex, varValue);
+                        });
+                    }
                 }
                 
                 const textArea = document.createElement("textarea");
                 textArea.value = scriptTextToCopy;
-                textArea.style.position = "fixed";
-                textArea.style.top = "0";
-                textArea.style.left = "0";
+                textArea.style.position = "fixed"; textArea.style.top = "0"; textArea.style.left = "0";
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
@@ -569,37 +947,44 @@
                 }
                 document.body.removeChild(textArea);
 
-                // Usamos la colección de producción
-                const scriptRef = doc(db, 'scripts', scriptId);
-                updateDoc(scriptRef, { copyCount: increment(1) }).catch(error => {
-                    console.warn("No se pudo actualizar el contador de copias.", error.message);
-                });
+                const itemRef = doc(collection, cardId);
+                try {
+                    await updateDoc(itemRef, { copyCount: increment(1) });
+                } catch (error) {
+                    console.warn("No se pudo actualizar el contador de copias", error.message);
+                }
 
-                copiedScripts.add(scriptId);
-                applyFilters();
-
+                currentSet.add(cardId);
+                renderFunc();
                 setTimeout(() => {
-                    copiedScripts.delete(scriptId);
-                    applyFilters();
+                    currentSet.delete(cardId);
+                    renderFunc();
                 }, 2000);
             }
 
-            if (favButton) {
-                const scriptId = favButton.dataset.id;
-                const starIcon = favButton.querySelector('svg');
-                if (favorites.includes(scriptId)) {
-                    favorites = favorites.filter(id => id !== scriptId);
-                    starIcon.classList.remove('text-yellow-400');
-                    starIcon.classList.add('text-gray-400/60');
+            // --- Lógica de Favoritos ---
+            if (favButton && (cardType === 'script' || cardType === 'query')) {
+                let currentFavorites = cardType === 'script' ? favorites : queryFavorites;
+                const storageKey = cardType === 'script' ? 'favoriteScripts' : 'favoriteQuerys';
+                const renderFunc = cardType === 'script' ? applyScriptFilters : applyQueryFilters;
+                
+                if (currentFavorites.includes(cardId)) {
+                    currentFavorites = currentFavorites.filter(id => id !== cardId);
                 } else {
-                    favorites.push(scriptId);
-                    starIcon.classList.add('text-yellow-400');
-                    starIcon.classList.remove('text-gray-400/60');
+                    currentFavorites.push(cardId);
                 }
-                localStorage.setItem('favoriteScripts', JSON.stringify(favorites));
-                if (filters.querySelector('.active').dataset.category === 'favorites') applyFilters();
+                
+                if (cardType === 'script') {
+                    favorites = currentFavorites;
+                } else {
+                    queryFavorites = currentFavorites;
+                }
+                
+                localStorage.setItem(storageKey, JSON.stringify(currentFavorites));
+                renderFunc();
             }
-            
+
+            // --- Lógica de Opciones Admin ---
             if (optionsButton) {
                 document.querySelectorAll('.options-menu').forEach(m => {
                     if (m !== optionsButton.nextElementSibling) m.classList.add('hidden');
@@ -607,81 +992,78 @@
                 optionsButton.nextElementSibling.classList.toggle('hidden');
             }
             if (editButton) {
-                const scriptId = e.target.closest('[data-id]').dataset.id;
-                openEditModal(scriptId);
+                openEditModal(cardId, cardType);
             }
             if (deleteButton) {
-                const scriptId = e.target.closest('[data-id]').dataset.id;
-                openDeleteModal(scriptId);
+                openDeleteModal(cardId, cardType);
             }
-
-            // [NUEVO] Manejadores de aprobación/rechazo
-            if (rejectButton) {
-                if (currentUserRole !== 'superadmin') return;
-                const card = rejectButton.closest('.relative');
-                const requestId = card.dataset.id;
-                try {
-                    // Borramos la solicitud
-                    await deleteDoc(doc(requestsCollection, requestId));
-                    console.log("Solicitud rechazada y eliminada.");
-                } catch (error) {
-                    console.error("Error al rechazar solicitud:", error);
-                }
-            }
-
+            
+            // --- Lógica de Aprobación (Super Admin) ---
             if (approveButton) {
-                if (currentUserRole !== 'superadmin') return;
-                const card = approveButton.closest('.relative');
-                const requestId = card.dataset.id;
-                
-                const request = pendingRequests.find(r => r.id === requestId);
-                if (!request) {
-                    console.error("No se encontró la solicitud local.");
-                    return;
-                }
-                const action = request.action;
-
-                try {
-                    if (action === 'create') {
-                        // 1. Creamos el script en la colección 'scripts'
-                        await addDoc(scriptsCollection, { ...request.scriptData, copyCount: 0 });
-                    } 
-                    else if (action === 'update') {
-                        // 1. Actualizamos el script en 'scripts'
-                        const scriptRef = doc(scriptsCollection, request.scriptId);
-                        await updateDoc(scriptRef, request.scriptData);
-                    } 
-                    else if (action === 'delete') {
-                        // 1. Eliminamos el script de 'scripts'
-                        await deleteDoc(doc(scriptsCollection, request.scriptId));
-                    }
-                    
-                    // 2. Eliminamos la solicitud de 'solicitudes'
-                    await deleteDoc(doc(requestsCollection, requestId));
-                    console.log(`Acción '${action}' aprobada y ejecutada.`);
-                    
-                } catch (error) {
-                    console.error("Error al aprobar la solicitud:", error);
-                }
+                handleApproval(cardId, cardType, true);
+            }
+            if (rejectButton) {
+                handleApproval(cardId, cardType, false);
             }
         });
 
+        // --- Clicks en Filtros ---
+        function handleFilterClicks(e) {
+            const button = e.target.closest('.nav-button');
+            if (!button) return;
+            const nav = button.closest('nav');
+            if (!nav) return;
+
+            const newCategory = button.dataset.category;
+
+            const activeButton = nav.querySelector('.active');
+            if (activeButton) activeButton.classList.remove('active');
+            button.classList.add('active');
+
+            if (nav.id === 'category-filters') {
+                applyScriptFilters();
+            } else if (nav.id === 'query-category-filters') {
+                if (newCategory === 'learn') {
+                    if(querysContainer) querysContainer.classList.add('hidden');
+                    if(learningSection) learningSection.classList.remove('hidden');
+                    if(querySearchContainer) querySearchContainer.classList.add('hidden');
+                } else {
+                    if(querysContainer) querysContainer.classList.remove('hidden');
+                    if(learningSection) learningSection.classList.add('hidden');
+                    if(querySearchContainer) querySearchContainer.classList.remove('hidden');
+                    applyQueryFilters();
+                }
+            }
+        }
+        if (scriptFilters) scriptFilters.addEventListener('click', handleFilterClicks);
+        if (queryFilters) queryFilters.addEventListener('click', handleFilterClicks);
+
+
+        // --- Búsqueda ---
+        if (scriptSearchInput) {
+            scriptSearchInput.addEventListener('input', applyScriptFilters);
+        } else {
+            console.error("No se pudo encontrar el elemento 'search-input'.");
+        }
+        if (querySearchInput) {
+            querySearchInput.addEventListener('input', applyQueryFilters);
+        } else {
+            console.error("No se pudo encontrar el elemento 'query-search-input'.");
+        }
+
+
+        // --- Ocultar menús de opciones ---
         document.body.addEventListener('click', (e) => {
             if (!e.target.closest('.options-btn')) {
                 document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
             }
         });
         
-        filters.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                filters.querySelector('.active').classList.remove('active');
-                e.target.classList.add('active');
-                applyFilters();
-            }
-        });
-        searchInput.addEventListener('input', applyFilters);
+        // --- ============================================ ---
+        // --- LÓGICA DE MODALES (GENÉRICA)                 ---
+        // --- ============================================ ---
 
-        // --- LÓGICA MODALES ---
+        // --- Modales Globales ---
         const loginModal = document.getElementById('login-modal');
         const loginForm = document.getElementById('login-form');
         const closeLoginModalBtn = document.getElementById('close-login-modal-btn');
@@ -690,192 +1072,322 @@
         const openLoginModal = () => { loginModal.classList.remove('hidden'); setTimeout(() => loginModal.classList.remove('opacity-0'), 10); };
         const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(() => { loginModal.classList.add('hidden'); loginForm.reset(); loginError.classList.add('hidden'); }, 300); };
         
-        closeLoginModalBtn.addEventListener('click', closeLoginModal);
-        loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeLoginModal(); });
-        loginForm.addEventListener('submit', (e) => {
+        if(closeLoginModalBtn) closeLoginModalBtn.addEventListener('click', closeLoginModal);
+        if(loginModal) loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeLoginModal(); });
+        
+        if(loginForm) loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
-            signInWithEmailAndPassword(auth, email, password)
-                .then(() => closeLoginModal())
-                .catch(error => { loginError.textContent = 'Credenciales incorrectas.'; loginError.classList.remove('hidden'); });
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                closeLoginModal();
+            } catch (error) {
+                loginError.textContent = 'Credenciales incorrectas.';
+                loginError.classList.remove('hidden');
+            }
         });
         
-        // Modal de Agregar/Editar Script
-        const modal = document.getElementById('add-script-modal');
-        const addScriptBtn = document.getElementById('add-script-btn');
+        // --- Modal de Agregar/Editar Item ---
+        const itemModal = document.getElementById('add-item-modal');
+        const addItemBtn = document.getElementById('add-item-btn');
         const cancelBtn = document.getElementById('cancel-btn');
         const closeModalBtn = document.getElementById('close-modal-btn');
-        const form = document.getElementById('script-form');
+        const itemForm = document.getElementById('script-form');
         const modalTitle = document.getElementById('modal-title');
-        const scriptIdInput = document.getElementById('script-id');
+        const itemIdInput = document.getElementById('item-id');
 
-        // [NUEVO] Modal de Información
+        const scriptCategorySelect = document.getElementById('item-category-script');
+        const queryCategorySelect = document.getElementById('item-category-query');
+        const variablesInput = document.getElementById('item-variables');
+        
+        const openModal = (title = "Agregar Nuevo") => {
+            modalTitle.textContent = title;
+            
+            if (currentView === 'scripts') {
+                scriptCategorySelect.classList.remove('hidden');
+                queryCategorySelect.classList.add('hidden');
+                variablesInput.classList.remove('hidden');
+            } else { // 'querys'
+                scriptCategorySelect.classList.add('hidden');
+                queryCategorySelect.classList.remove('hidden');
+                variablesInput.classList.add('hidden');
+            }
+            
+            itemModal.classList.remove('hidden');
+            setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
+        };
+        const closeModal = () => { itemModal.classList.add('opacity-0'); setTimeout(() => { itemModal.classList.add('hidden'); itemForm.reset(); itemIdInput.value = ''; }, 300); };
+        
+        if(addItemBtn) addItemBtn.addEventListener('click', () => openModal(currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query'));
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        if(closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+        if(itemModal) itemModal.addEventListener('click', (e) => { if (e.target === itemModal) closeModal(); });
+
+        const openEditModal = (id, type) => {
+            const collection = type === 'scripts' ? allScripts : allQuerys;
+            const itemToEdit = collection.find(item => item.id === id);
+            if (!itemToEdit) return;
+            
+            itemIdInput.value = id;
+            document.getElementById('item-title').value = itemToEdit.title;
+            document.getElementById('item-description').value = itemToEdit.description;
+            document.getElementById('item-text').value = itemToEdit.scriptText;
+            
+            if (type === 'scripts') {
+                document.getElementById('item-category-script').value = itemToEdit.category;
+                document.getElementById('item-variables').value = (itemToEdit.variables || []).join(', ');
+            } else { // 'querys'
+                document.getElementById('item-category-query').value = itemToEdit.category;
+            }
+            
+            openModal(type === 'scripts' ? 'Modificar Script' : 'Modificar Query');
+        };
+
+        if(itemForm) itemForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const itemId = itemIdInput.value;
+            const isEdit = !!itemId;
+            
+            const itemData = {
+                title: document.getElementById('item-title').value,
+                description: document.getElementById('item-description').value,
+                scriptText: document.getElementById('item-text').value,
+                category: currentView === 'scripts' ? scriptCategorySelect.value : queryCategorySelect.value,
+                variables: currentView === 'scripts' ? document.getElementById('item-variables').value.split(',').map(v => v.trim()).filter(v => v) : [],
+                lastUpdatedBy: userId,
+                updatedAt: serverTimestamp()
+            };
+            
+            const action = isEdit ? 'edit' : 'add';
+            const collection = currentView === 'scripts' ? scriptsCollection : querysCollection;
+            const requests = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
+
+            try {
+                if (currentUserRole === 'superadmin') {
+                    if (isEdit) {
+                        const itemRef = doc(collection, itemId);
+                        await updateDoc(itemRef, itemData);
+                    } else {
+                        itemData.copyCount = 0;
+                        await addDoc(collection, itemData);
+                    }
+                } else if (currentUserRole === 'admin') {
+                    const requestData = {
+                        ...itemData,
+                        action: action,
+                        originalId: itemId || null,
+                        status: 'pending',
+                        requestedBy: userId,
+                        timestamp: serverTimestamp()
+                    };
+                    await addDoc(requests, requestData);
+                    openInfoModal('Solicitud Enviada', 'Tu solicitud ha sido enviada al Super Administrador para aprobación.');
+                }
+                closeModal();
+            } catch (error) { console.error("Error al guardar: ", error); alert("Hubo un error al guardar."); }
+        });
+
+        // --- Modal de Confirmación (Info) ---
         const infoModal = document.getElementById('info-modal');
         const infoModalTitle = document.getElementById('info-modal-title');
-        const infoModalMessage = document.getElementById('info-modal-message');
-        const infoModalCloseBtn = document.getElementById('info-modal-close-btn');
+        const infoModalText = document.getElementById('info-modal-text');
+        const infoModalClose = document.getElementById('info-modal-close');
 
-        const showConfirmationModal = (title, message) => {
+        const openInfoModal = (title, text) => {
             infoModalTitle.textContent = title;
-            infoModalMessage.textContent = message;
+            infoModalText.textContent = text;
             infoModal.classList.remove('hidden');
             setTimeout(() => infoModal.classList.remove('opacity-0'), 10);
         };
-        
         const closeInfoModal = () => {
             infoModal.classList.add('opacity-0');
             setTimeout(() => infoModal.classList.add('hidden'), 300);
         };
-        
-        infoModalCloseBtn.addEventListener('click', closeInfoModal);
-        infoModal.addEventListener('click', (e) => { if (e.target === infoModal) closeInfoModal(); });
+        if(infoModalClose) infoModalClose.addEventListener('click', closeInfoModal);
+        if(infoModal) infoModal.addEventListener('click', (e) => { if (e.target === infoModal) closeInfoModal(); });
 
-        // Lógica de apertura/cierre modal
-        const openModal = (title = "Agregar Nuevo Script") => { modalTitle.textContent = title; modal.classList.remove('hidden'); setTimeout(() => modal.classList.remove('opacity-0'), 10); };
-        const closeModal = () => { modal.classList.add('opacity-0'); setTimeout(() => { modal.classList.add('hidden'); form.reset(); scriptIdInput.value = ''; }, 300); };
-        
-        addScriptBtn.addEventListener('click', () => openModal());
-        cancelBtn.addEventListener('click', closeModal);
-        closeModalBtn.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-        const openEditModal = (id) => {
-            const scriptToEdit = allScripts.find(s => s.id === id);
-            if (!scriptToEdit) return;
-            scriptIdInput.value = id;
-            document.getElementById('script-title').value = scriptToEdit.title;
-            document.getElementById('script-description').value = scriptToEdit.description;
-            document.getElementById('script-text').value = scriptToEdit.scriptText;
-            document.getElementById('script-category').value = scriptToEdit.category;
-            document.getElementById('script-variables').value = (scriptToEdit.variables || []).join(', ');
-            openModal("Modificar Script");
-        };
-
-        // [MODIFICADO] El formulario de submit ahora depende del ROL
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const scriptId = scriptIdInput.value;
-            const scriptData = {
-                title: document.getElementById('script-title').value,
-                description: document.getElementById('script-description').value,
-                scriptText: document.getElementById('script-text').value,
-                category: document.getElementById('script-category').value,
-                variables: document.getElementById('script-variables').value.split(',').map(v => v.trim()).filter(v => v)
-            };
-            const action = scriptId ? 'update' : 'create';
-
-            if (currentUserRole === 'superadmin') {
-                // --- Lógica de Super Admin (directo a 'scripts') ---
-                try {
-                    if (action === 'update') {
-                        const scriptRef = doc(scriptsCollection, scriptId);
-                        await updateDoc(scriptRef, scriptData); 
-                    } 
-                    else {
-                        scriptData.copyCount = 0; // Iniciar contador
-                        await addDoc(scriptsCollection, scriptData); 
-                    }
-                    closeModal();
-                } catch (error) { 
-                    console.error("Error al guardar (Super Admin): ", error);
-                }
-
-            } else if (currentUserRole === 'admin') {
-                // --- Lógica de Admin (enviar a 'solicitudes') ---
-                const requestData = {
-                    action: action,
-                    scriptData: scriptData, // Datos nuevos
-                    scriptId: scriptId || null,
-                    requestedBy: auth.currentUser.email || 'Admin',
-                    status: 'pending',
-                    timestamp: serverTimestamp()
-                };
-
-                try {
-                    await addDoc(requestsCollection, requestData);
-                    closeModal();
-                    showConfirmationModal("Solicitud Enviada", "Tu solicitud ha sido enviada al Super Administrador para su aprobación.");
-                } catch (error) {
-                    console.error("Error al enviar solicitud (Admin): ", error);
-                }
-            } else {
-                console.log("Usuario sin permisos intenta guardar.");
-            }
-        });
-
-        // Modal de Confirmar Eliminación
+        // --- Modal de Eliminar (Delete) ---
         const deleteModal = document.getElementById('delete-confirm-modal');
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-        let scriptToDeleteId = null;
+        const deleteModalText = document.getElementById('delete-modal-text');
+        let itemToDelete = { id: null, type: null };
 
-        const openDeleteModal = (id) => { scriptToDeleteId = id; deleteModal.classList.remove('hidden'); setTimeout(() => deleteModal.classList.remove('opacity-0'), 10); };
-        const closeDeleteModal = () => { deleteModal.classList.add('opacity-0'); setTimeout(() => { deleteModal.classList.add('hidden'); scriptToDeleteId = null; }, 300); };
-        
-        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
-        deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
-        
-        // [MODIFICADO] El botón de eliminar ahora depende del ROL
-        confirmDeleteBtn.addEventListener('click', async () => {
-            if (!scriptToDeleteId) return;
-
-            if (currentUserRole === 'superadmin') {
-                // --- Lógica de Super Admin (elimina directo de 'scripts') ---
-                try {
-                    await deleteDoc(doc(scriptsCollection, scriptToDeleteId));
-                    closeDeleteModal();
-                } catch (error) { 
-                    console.error("Error al eliminar (Super Admin): ", error); 
-                }
+        const openDeleteModal = (id, type) => {
+            itemToDelete = { id: id, type: type };
+            const collection = type === 'scripts' ? allScripts : allQuerys;
+            const item = collection.find(i => i.id === id);
             
-            } else if (currentUserRole === 'admin') {
-                // --- Lógica de Admin (enviar a 'solicitudes') ---
-                const scriptToDelete = allScripts.find(s => s.id === scriptToDeleteId);
-                if (!scriptToDelete) {
-                    console.error("No se encontró el script para eliminar");
-                    closeDeleteModal();
-                    return;
-                }
-                
-                const requestData = {
-                    action: 'delete',
-                    scriptData: scriptToDelete, // Guardamos los datos del script a eliminar
-                    scriptId: scriptToDeleteId,
-                    requestedBy: auth.currentUser.email || 'Admin',
-                    status: 'pending',
-                    timestamp: serverTimestamp()
-                };
-
-                try {
-                    await addDoc(requestsCollection, requestData);
-                    closeDeleteModal();
-                    showConfirmationModal("Solicitud de Eliminación Enviada", "Tu solicitud ha sido enviada al Super Administrador para su aprobación.");
-                } catch (error) {
-                    console.error("Error al enviar solicitud de eliminación (Admin): ", error);
-                }
+            if (!item) {
+                console.error("Item no encontrado para eliminar");
+                return;
             }
+            
+            if (currentUserRole === 'superadmin') {
+                deleteModalText.textContent = `¿Seguro que quieres eliminar "${item.title}"? Esta acción no se puede deshacer.`;
+            } else {
+                deleteModalText.textContent = `¿Enviar solicitud para eliminar "${item.title}"?`;
+            }
+            
+            deleteModal.classList.remove('hidden');
+            setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
+        };
+        const closeDeleteModal = () => {
+            deleteModal.classList.add('opacity-0');
+            setTimeout(() => { deleteModal.classList.add('hidden'); itemToDelete = { id: null, type: null }; }, 300);
+        };
+        
+        if(cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        if(deleteModal) deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
+        
+        if(confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', async () => {
+            if (!itemToDelete.id || !itemToDelete.type) return;
+
+            const { id, type } = itemToDelete;
+            const collection = type === 'scripts' ? scriptsCollection : querysCollection;
+            const requests = type === 'scripts' ? requestsCollection : queryRequestsCollection;
+            const allItems = type === 'scripts' ? allScripts : allQuerys;
+            const item = allItems.find(i => i.id === id);
+            
+            if (!item) {
+                console.error("Item no encontrado para procesar eliminación");
+                closeDeleteModal();
+                return;
+            }
+
+            try {
+                if (currentUserRole === 'superadmin') {
+                    await deleteDoc(doc(collection, id));
+                } else if (currentUserRole === 'admin') {
+                    const requestData = {
+                        action: 'delete',
+                        originalId: id,
+                        title: item.title,
+                        description: item.description,
+                        scriptText: item.scriptText,
+                        category: item.category,
+                        variables: item.variables || [],
+                        status: 'pending',
+                        requestedBy: userId,
+                        timestamp: serverTimestamp()
+                    };
+                    await addDoc(requests, requestData);
+                    openInfoModal('Solicitud Enviada', `Tu solicitud para eliminar "${item.title}" ha sido enviada.`);
+                }
+                closeDeleteModal();
+            } catch (error) { console.error("Error al eliminar: ", error); alert("Hubo un error al procesar la solicitud."); }
         });
         
+        // --- Lógica de Aprobación (Super Admin) ---
+        const handleApproval = async (requestId, type, isApproved) => {
+            const requests = type === 'scripts' ? requestsCollection : queryRequestsCollection;
+            const collection = type === 'scripts' ? scriptsCollection : querysCollection;
+            const requestDocRef = doc(requests, requestId);
+            
+            try {
+                const requestSnap = await getDoc(requestDocRef);
+                if (!requestSnap.exists()) return;
+                
+                const reqData = requestSnap.data();
+                
+                if (isApproved) {
+                    const itemData = {
+                        title: reqData.title,
+                        description: reqData.description,
+                        scriptText: reqData.scriptText,
+                        category: reqData.category,
+                        variables: reqData.variables || [],
+                        lastUpdatedBy: reqData.requestedBy,
+                        updatedAt: serverTimestamp()
+                    };
+
+                    if (reqData.action === 'add') {
+                        itemData.copyCount = 0;
+                        await addDoc(collection, itemData);
+                    } else if (reqData.action === 'edit') {
+                        await updateDoc(doc(collection, reqData.originalId), itemData);
+                    } else if (reqData.action === 'delete') {
+                        await deleteDoc(doc(collection, reqData.originalId));
+                    }
+                }
+                await deleteDoc(requestDocRef);
+                
+            } catch (error) {
+                console.error("Error al procesar la aprobación: ", error);
+                alert("Error al procesar la solicitud.");
+            }
+        };
+        
+        
+        // --- ============================================ ---
+        // --- LÓGICA DEL ACORDEÓN Y SQL INTERACTIVO         ---
+        // --- ============================================ ---
+
+        if (learningSection) {
+            
+            const interactiveSqlBlock = document.getElementById('interactive-sql-block');
+            const explanationBox = document.getElementById('sql-explanation-box');
+            if (interactiveSqlBlock && explanationBox) {
+                const explanations = explanationBox.querySelectorAll('.sql-explanation');
+                const hoverTargets = interactiveSqlBlock.querySelectorAll('[data-hover-target]');
+                const defaultExplanation = document.getElementById('exp-default');
+
+                hoverTargets.forEach(target => {
+                    target.addEventListener('mouseover', () => {
+                        const targetId = target.getAttribute('data-hover-target');
+                        
+                        explanations.forEach(exp => exp.classList.add('hidden'));
+                        hoverTargets.forEach(t => {
+                             t.classList.remove('bg-yellow-200', 'dark:bg-yellow-700', 'text-black', 'dark:text-black');
+                             if (t.getAttribute('data-hover-target') === 'exp-select' || t.getAttribute('data-hover-target') === 'exp-from' || t.getAttribute('data-hover-target') === 'exp-where') t.classList.add('text-pink-400');
+                             if (t.getAttribute('data-hover-target') === 'exp-table') t.classList.add('text-green-400');
+                             if (t.getAttribute('data-hover-target') === 'exp-condition') t.classList.add('text-blue-300');
+                             if (t.getAttribute('data-hover-target') === 'exp-all') t.classList.add('text-gray-300');
+                        });
+                        
+                        const activeExplanation = document.getElementById(targetId);
+                        if (activeExplanation) {
+                            activeExplanation.classList.remove('hidden');
+                            target.classList.add('bg-yellow-200', 'dark:bg-yellow-700', 'text-black', 'dark:text-black');
+                            target.classList.remove('text-pink-400', 'text-green-400', 'text-blue-300', 'text-gray-300');
+                        }
+                    });
+                });
+
+                interactiveSqlBlock.addEventListener('mouseleave', () => {
+                     explanations.forEach(exp => exp.classList.add('hidden'));
+                     hoverTargets.forEach(t => {
+                         t.classList.remove('bg-yellow-200', 'dark:bg-yellow-700', 'text-black', 'dark:text-black');
+                         if (t.getAttribute('data-hover-target') === 'exp-select' || t.getAttribute('data-hover-target') === 'exp-from' || t.getAttribute('data-hover-target') === 'exp-where') t.classList.add('text-pink-400');
+                         if (t.getAttribute('data-hover-target') === 'exp-table') t.classList.add('text-green-400');
+                         if (t.getAttribute('data-hover-target') === 'exp-condition') t.classList.add('text-blue-300');
+                         if (t.getAttribute('data-hover-target') === 'exp-all') t.classList.add('text-gray-300');
+                     });
+                     if (defaultExplanation) defaultExplanation.classList.remove('hidden');
+                });
+            }
+        }
+
         //--- LÓGICA DEL TEMA (ORIGINAL) ---
         const themeToggle = document.getElementById('theme-toggle');
         const darkIcon = document.getElementById('theme-toggle-dark-icon');
         const lightIcon = document.getElementById('theme-toggle-light-icon');
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
-            lightIcon.classList.remove('hidden');
+            if(lightIcon) lightIcon.classList.remove('hidden');
         } else {
             document.documentElement.classList.remove('dark');
-            darkIcon.classList.remove('hidden');
+            if(darkIcon) darkIcon.classList.remove('hidden');
         }
-        themeToggle.addEventListener('click', () => {
-            darkIcon.classList.toggle('hidden');
-            lightIcon.classList.toggle('hidden');
+        if(themeToggle) themeToggle.addEventListener('click', () => {
+            if(darkIcon) darkIcon.classList.toggle('hidden');
+            if(lightIcon) lightIcon.classList.toggle('hidden');
             document.documentElement.classList.toggle('dark');
             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
         });
 
     </script>
 </body>
-
 </html>
