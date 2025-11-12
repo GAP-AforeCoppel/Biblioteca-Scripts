@@ -990,31 +990,39 @@
                 }, 2000);
             }
 
-            // --- Lógica de Favoritos ---
-            if (favButton && (cardType === 'script' || cardType === 'query')) {
-                // El bug estaba en que 'currentFavorites' era una copia.
-                // Esta corrección modifica la variable global 'favorites' o 'queryFavorites' directamente.
+            // --- Lógica de Favoritos (CORRECCIÓN DEFINITIVA) ---
+            if (favButton && cardType === 'script') {
+                const storageKey = 'favoriteScripts';
+                const index = favorites.indexOf(cardId);
                 
-                if (cardType === 'script') {
-                    const storageKey = 'favoriteScripts';
-                    if (favorites.includes(cardId)) {
-                        favorites = favorites.filter(id => id !== cardId); // Re-asigna la variable global
-                    } else {
-                        favorites.push(cardId);
-                    }
-                    localStorage.setItem(storageKey, JSON.stringify(favorites));
-                    applyScriptFilters(); // Llama a la función de render específica
-                
-                } else if (cardType === 'query') {
-                    const storageKey = 'favoriteQuerys';
-                    if (queryFavorites.includes(cardId)) {
-                        queryFavorites = queryFavorites.filter(id => id !== cardId); // Re-asigna la variable global
-                    } else {
-                        queryFavorites.push(cardId);
-                    }
-                    localStorage.setItem(storageKey, JSON.stringify(queryFavorites));
-                    applyQueryFilters(); // Llama a la función de render específica
+                if (index > -1) {
+                    // Si ya existe, quitarlo del array global
+                    favorites.splice(index, 1);
+                } else {
+                    // Si no existe, agregarlo
+                    favorites.push(cardId);
                 }
+                
+                // Guardar y re-dibujar
+                localStorage.setItem(storageKey, JSON.stringify(favorites));
+                applyScriptFilters(); 
+            }
+
+            if (favButton && cardType === 'query') {
+                const storageKey = 'favoriteQuerys';
+                const index = queryFavorites.indexOf(cardId);
+
+                if (index > -1) {
+                    // Si ya existe, quitarlo
+                    queryFavorites.splice(index, 1);
+                } else {
+                    // Si no existe, agregarlo
+                    queryFavorites.push(cardId);
+                }
+
+                // Guardar y re-dibujar
+                localStorage.setItem(storageKey, JSON.stringify(queryFavorites));
+                applyQueryFilters();
             }
             
             // --- Lógica de Opciones Admin ---
@@ -1425,4 +1433,5 @@
 </body>
 
 </html>
+
 
