@@ -1003,7 +1003,7 @@
                     favorites.push(cardId);
                 }
                 
-                // Guardar y re-dibujar
+                // Guardar en localStorage y re-dibujar la vista
                 localStorage.setItem(storageKey, JSON.stringify(favorites));
                 applyScriptFilters(); 
             }
@@ -1020,7 +1020,7 @@
                     queryFavorites.push(cardId);
                 }
 
-                // Guardar y re-dibujar
+                // Guardar en localStorage y re-dibujar la vista
                 localStorage.setItem(storageKey, JSON.stringify(queryFavorites));
                 applyQueryFilters();
             }
@@ -1433,5 +1433,6 @@
 </body>
 
 </html>
+
 
 
