@@ -992,26 +992,31 @@
 
             // --- Lógica de Favoritos ---
             if (favButton && (cardType === 'script' || cardType === 'query')) {
-                let currentFavorites = cardType === 'script' ? favorites : queryFavorites;
-                const storageKey = cardType === 'script' ? 'favoriteScripts' : 'favoriteQuerys';
-                const renderFunc = cardType === 'script' ? applyScriptFilters : applyQueryFilters;
-                
-                if (currentFavorites.includes(cardId)) {
-                    currentFavorites = currentFavorites.filter(id => id !== cardId);
-                } else {
-                    currentFavorites.push(cardId);
-                }
+                // El bug estaba en que 'currentFavorites' era una copia.
+                // Esta corrección modifica la variable global 'favorites' o 'queryFavorites' directamente.
                 
                 if (cardType === 'script') {
-                    favorites = currentFavorites;
-                } else {
-                    queryFavorites = currentFavorites;
-                }
+                    const storageKey = 'favoriteScripts';
+                    if (favorites.includes(cardId)) {
+                        favorites = favorites.filter(id => id !== cardId); // Re-asigna la variable global
+                    } else {
+                        favorites.push(cardId);
+                    }
+                    localStorage.setItem(storageKey, JSON.stringify(favorites));
+                    applyScriptFilters(); // Llama a la función de render específica
                 
-                localStorage.setItem(storageKey, JSON.stringify(currentFavorites));
-                renderFunc();
+                } else if (cardType === 'query') {
+                    const storageKey = 'favoriteQuerys';
+                    if (queryFavorites.includes(cardId)) {
+                        queryFavorites = queryFavorites.filter(id => id !== cardId); // Re-asigna la variable global
+                    } else {
+                        queryFavorites.push(cardId);
+                    }
+                    localStorage.setItem(storageKey, JSON.stringify(queryFavorites));
+                    applyQueryFilters(); // Llama a la función de render específica
+                }
             }
-
+            
             // --- Lógica de Opciones Admin ---
             if (optionsButton) {
                 document.querySelectorAll('.options-menu').forEach(m => {
@@ -1420,3 +1425,4 @@
 </body>
 
 </html>
+
