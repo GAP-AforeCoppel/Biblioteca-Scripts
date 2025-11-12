@@ -1145,23 +1145,35 @@
         const openModal = (title = "Agregar Nuevo") => {
             modalTitle.textContent = title;
             
-            if (currentView === 'scripts') {
-                scriptCategorySelect.classList.remove('hidden');
-                scriptCategorySelect.required = true; // SÍ es requerido
-                queryCategorySelect.classList.add('hidden');
-                queryCategorySelect.required = false; // NO es requerido
-                variablesInput.classList.remove('hidden');
-            } else { // 'querys'
-                scriptCategorySelect.classList.add('hidden');
-                scriptCategorySelect.required = false; // NO es requerido
-                queryCategorySelect.classList.remove('hidden');
-                queryCategorySelect.required = true; // SÍ es requerido
-                variablesInput.classList.add('hidden');
-            }
-            
-            itemModal.classList.remove('hidden');
-            setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
-        };
+
+const openModal = (title = "Agregar Nuevo") => {
+    modalTitle.textContent = title;
+    
+    // --- INICIO DE LA CORRECCIÓN (RESTAURACIÓN) ---
+    // Restauramos la validación estándar para los campos de texto
+    // cada vez que el modal se abre para Agregar o Modificar.
+    document.getElementById('item-title').required = true;
+    document.getElementById('item-description').required = true;
+    document.getElementById('item-text').required = true;
+    // --- FIN DE LA CORRECCIÓN (RESTAURACIÓN) ---
+
+    if (currentView === 'scripts') {
+        scriptCategorySelect.classList.remove('hidden');
+        scriptCategorySelect.required = true; // SÍ es requerido
+        queryCategorySelect.classList.add('hidden');
+        queryCategorySelect.required = false; // NO es requerido
+        variablesInput.classList.remove('hidden');
+    } else { // 'querys'
+        scriptCategorySelect.classList.add('hidden');
+        scriptCategorySelect.required = false; // NO es requerido
+        queryCategorySelect.classList.remove('hidden');
+        queryCategorySelect.required = true; // SÍ es requerido
+        variablesInput.classList.add('hidden');
+    }
+    
+    itemModal.classList.remove('hidden');
+    setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
+};
         
         const closeModal = () => { itemModal.classList.add('opacity-0'); setTimeout(() => { itemModal.classList.add('hidden'); itemForm.reset(); itemIdInput.value = ''; }, 300); };
         
@@ -1261,33 +1273,35 @@
         const deleteModalText = document.getElementById('delete-modal-text');
         let itemToDelete = { id: null, type: null };
 
-        const openDeleteModal = (id, type) => {
-            itemToDelete = { id: id, type: type };
-            const collection = type === 'scripts' ? allScripts : allQuerys;
-            const item = collection.find(i => i.id === id);
-            
-            if (!item) {
-                console.error("Item no encontrado para eliminar");
-                return;
-            }
+const openDeleteModal = (id, type) => {
+    itemToDelete = { id: id, type: type };
+    const collection = type === 'scripts' ? allScripts : allQuerys;
+    const item = collection.find(i => i.id === id);
+    
+    if (!item) {
+        console.error("Item no encontrado para eliminar");
+        return;
+    }
 
-            // --- INICIO DE LA CORRECCIÓN ---
-            // Le decimos al formulario de AGREGAR/MODIFICAR (que está oculto)
-            // que sus campos de categoría NO son requeridos en este momento.
-            // Esto desbloquea el botón "Sí, Eliminar".
-            scriptCategorySelect.required = false;
-            queryCategorySelect.required = false;
-            // --- FIN DE LA CORRECCIÓN ---
-            
-            if (currentUserRole === 'superadmin') {
-                deleteModalText.textContent = `¿Seguro que quieres eliminar "${item.title}"? Esta acción no se puede deshacer.`;
-            } else {
-                deleteModalText.textContent = `¿Enviar solicitud para eliminar "${item.title}"?`;
-            }
-            
-            deleteModal.classList.remove('hidden');
-            setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
-        };
+    // --- INICIO DE LA CORRECCIÓN MEJORADA ---
+    // Desactivamos temporalmente TODA la validación del formulario de "Agregar/Editar"
+    // (que está oculto) para prevenir que el navegador bloquee el clic del botón "Sí, Eliminar".
+    document.getElementById('item-title').required = false;
+    document.getElementById('item-description').required = false;
+    document.getElementById('item-text').required = false;
+    scriptCategorySelect.required = false;
+    queryCategorySelect.required = false;
+    // --- FIN DE LA CORRECCIÓN MEJORADA ---
+    
+    if (currentUserRole === 'superadmin') {
+        deleteModalText.textContent = `¿Seguro que quieres eliminar "${item.title}"? Esta acción no se puede deshacer.`;
+    } else {
+        deleteModalText.textContent = `¿Enviar solicitud para eliminar "${item.title}"?`;
+    }
+    
+    deleteModal.classList.remove('hidden');
+    setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
+};
         
         const closeDeleteModal = () => {
             deleteModal.classList.add('opacity-0');
@@ -1447,6 +1461,7 @@
 </body>
 
 </html>
+
 
 
 
