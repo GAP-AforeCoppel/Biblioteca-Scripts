@@ -733,7 +733,7 @@
             } else if (activeCategory === 'favorites') {
                 filteredQuerys = allQuerys.filter(query => queryFavorites.includes(query.id));
             } else if (activeCategory === 'popular') {
-                filteredQuerys = [...allQueryGQuerys].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
+                filteredQuerys = [...allQuerys].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
             } else if (activeCategory !== 'all') {
                 filteredQuerys = allQuerys.filter(query => query.category === activeCategory);
             } else {
@@ -747,8 +747,14 @@
         };
 
         const navigateTo = (view) => {
+            // =========================================================
+            // INICIO DE LA SOLUCIÓN:
+            // Cierra el modal para limpiar el estado 'required' antes de cambiar de vista.
+            if (itemModal) closeModal();
+            // FIN DE LA SOLUCIÓN
+            // =========================================================
+
             currentView = view;
-            
             if (view === 'scripts') {
                 scriptsPage.classList.remove('hidden');
                 querysPage.classList.add('hidden');
@@ -1484,6 +1490,7 @@
 </body>
 
 </html>
+
 
 
 
