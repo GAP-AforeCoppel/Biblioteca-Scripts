@@ -1174,7 +1174,28 @@
         };
         // ****** FIN DE LA CORRECCIÓN ******
         
-        const closeModal = () => { itemModal.classList.add('opacity-0'); setTimeout(() => { itemModal.classList.add('hidden'); itemForm.reset(); itemIdInput.value = ''; }, 300); };
+        // ****** INICIO DE LA CORRECCIÓN ******
+    // Esta es la ÚNICA versión de closeModal que debe existir
+    const closeModal = () => {
+        itemModal.classList.add('opacity-0');
+        setTimeout(() => {
+            itemModal.classList.add('hidden');
+            itemForm.reset();
+            itemIdInput.value = '';
+
+            // --- INICIO DEL FIX DEFINITIVO ---
+            // Neutralizamos la validación del formulario oculto
+            // para que el navegador no bloquee otros clics.
+            document.getElementById('item-title').required = false;
+            document.getElementById('item-description').required = false;
+            document.getElementById('item-text').required = false;
+            scriptCategorySelect.required = false;
+            queryCategorySelect.required = false;
+            // --- FIN DEL FIX DEFINITIVO ---
+
+        }, 300);
+    };
+    // ****** FIN DE LA CORRECCIÓN ******
         
         if(addItemBtn) addItemBtn.addEventListener('click', () => openModal(currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query'));
         if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
@@ -1463,6 +1484,7 @@
 </body>
 
 </html>
+
 
 
 
