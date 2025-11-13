@@ -733,7 +733,7 @@
             } else if (activeCategory === 'favorites') {
                 filteredQuerys = allQuerys.filter(query => queryFavorites.includes(query.id));
             } else if (activeCategory === 'popular') {
-                filteredQuerys = [...allQuerys].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
+                filteredQuerys = [...allQueryGQuerys].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
             } else if (activeCategory !== 'all') {
                 filteredQuerys = allQuerys.filter(query => query.category === activeCategory);
             } else {
@@ -1142,6 +1142,8 @@
         const queryCategorySelect = document.getElementById('item-category-query');
         const variablesInput = document.getElementById('item-variables');
         
+        // ****** INICIO DE LA CORRECCIÓN ******
+        // Esta es la ÚNICA versión de openModal que debe existir
         const openModal = (title = "Agregar Nuevo") => {
             modalTitle.textContent = title;
             
@@ -1170,6 +1172,7 @@
             itemModal.classList.remove('hidden');
             setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
+        // ****** FIN DE LA CORRECCIÓN ******
         
         const closeModal = () => { itemModal.classList.add('opacity-0'); setTimeout(() => { itemModal.classList.add('hidden'); itemForm.reset(); itemIdInput.value = ''; }, 300); };
         
@@ -1269,6 +1272,8 @@
         const deleteModalText = document.getElementById('delete-modal-text');
         let itemToDelete = { id: null, type: null };
        
+        // ****** INICIO DE LA CORRECCIÓN ******
+        // Esta es la ÚNICA versión de openDeleteModal que debe existir
         const openDeleteModal = (id, type) => {
             itemToDelete = { id: id, type: type };
             const collection = type === 'scripts' ? allScripts : allQuerys;
@@ -1298,6 +1303,7 @@
             deleteModal.classList.remove('hidden');
             setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
         };
+        // ****** FIN DE LA CORRECCIÓN ******
 
          const closeDeleteModal = () => {
             deleteModal.classList.add('opacity-0');
@@ -1457,6 +1463,7 @@
 </body>
 
 </html>
+
 
 
 
