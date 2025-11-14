@@ -986,89 +986,89 @@
             const rejectButton = e.target.closest('.reject-btn');
 
             // --- Lógica de Copiar ---
-            if (copyButton && (cardType === 'script' || cardType === 'query')) {
-                const currentSet = cardType === 'script' ? copiedScripts : copiedQuerys;
-                const renderFunc = cardType === 'script' ? applyScriptFilters : applyQueryFilters;
-                const collection = cardType === 'script' ? scriptsCollection : querysCollection;
-                
-                if (currentSet.has(cardId)) return;
+                if (copyButton && (cardType === 'scripts' || cardType === 'query')) { // <-- CORRECCIÓN 1
+                    const currentSet = cardType === 'scripts' ? copiedScripts : copiedQuerys; // <-- CORRECCIÓN 2
+                    const renderFunc = cardType === 'scripts' ? applyScriptFilters : applyQueryFilters; // <-- CORRECCIÓN 3
+                    const collection = cardType === 'scripts' ? scriptsCollection : querysCollection; // <-- CORRECCIÓN 4
+                    
+                    if (currentSet.has(cardId)) return;
 
-                let scriptTextToCopy = card.querySelector('.script-content').textContent;
-                
-                if (cardType === 'script') {
-                    const variableInputs = card.querySelectorAll('.variable-input');
-                    if (variableInputs.length > 0) {
-                        variableInputs.forEach(input => {
-                            const varName = input.dataset.variableName;
-                            const varValue = input.value || `[${varName}]`;
-                            const regex = new RegExp(varName, 'g');
-                            scriptTextToCopy = scriptTextToCopy.replace(regex, varValue);
-                        });
+                    let scriptTextToCopy = card.querySelector('.script-content').textContent;
+                    
+                    if (cardType === 'scripts') { // <-- CORRECCIÓN 5
+                        const variableInputs = card.querySelectorAll('.variable-input');
+                        if (variableInputs.length > 0) {
+                            variableInputs.forEach(input => {
+                                const varName = input.dataset.variableName;
+                                const varValue = input.value || `[${varName}]`;
+                                const regex = new RegExp(varName, 'g');
+                                scriptTextToCopy = scriptTextToCopy.replace(regex, varValue);
+                            });
+                        }
                     }
-                }
-                
-                const textArea = document.createElement("textarea");
-                textArea.value = scriptTextToCopy;
-                textArea.style.position = "fixed"; textArea.style.top = "0"; textArea.style.left = "0";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                } catch (err) {
-                    console.error('Fallback: Oops, unable to copy', err);
-                }
-                document.body.removeChild(textArea);
+                    
+                    const textArea = document.createElement("textarea");
+                    textArea.value = scriptTextToCopy;
+                    textArea.style.position = "fixed"; textArea.style.top = "0"; textArea.style.left = "0";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                    } catch (err) {
+                        console.error('Fallback: Oops, unable to copy', err);
+                    }
+                    document.body.removeChild(textArea);
 
-                const itemRef = doc(collection, cardId);
-                try {
-                    await updateDoc(itemRef, { copyCount: increment(1) });
-                } catch (error) {
-                    console.warn("No se pudo actualizar el contador de copias", error.message);
-                }
+                    const itemRef = doc(collection, cardId);
+                    try {
+                        await updateDoc(itemRef, { copyCount: increment(1) });
+                    } catch (error) {
+                        console.warn("No se pudo actualizar el contador de copias", error.message);
+                    }
 
-                currentSet.add(cardId);
-                renderFunc();
-                setTimeout(() => {
-                    currentSet.delete(cardId);
+                    currentSet.add(cardId);
                     renderFunc();
-                }, 2000);
-            }
-
+                    setTimeout(() => {
+                        currentSet.delete(cardId);
+                        renderFunc();
+                    }, 2000);
+                }
+            
             // --- Lógica de Favoritos (CORRECCIÓN DEFINITIVA) ---
-            if (favButton && cardType === 'script') {
-                const storageKey = 'favoriteScripts';
-                const index = favorites.indexOf(cardId);
-                
-                if (index > -1) {
-                    // Si ya existe, quitarlo del array global
-                    favorites.splice(index, 1);
-                } else {
-                    // Si no existe, agregarlo
-                    favorites.push(cardId);
+                if (favButton && cardType === 'scripts') { // <-- CORRECCIÓN 6
+                    const storageKey = 'favoriteScripts';
+                    const index = favorites.indexOf(cardId);
+                    
+                    if (index > -1) {
+                        // Si ya existe, quitarlo del array global
+                        favorites.splice(index, 1);
+                    } else {
+                        // Si no existe, agregarlo
+                        favorites.push(cardId);
+                    }
+                    
+                    // Guardar en localStorage y re-dibujar la vista
+                    localStorage.setItem(storageKey, JSON.stringify(favorites));
+                    applyScriptFilters(); 
                 }
-                
-                // Guardar en localStorage y re-dibujar la vista
-                localStorage.setItem(storageKey, JSON.stringify(favorites));
-                applyScriptFilters(); 
-            }
+    
+                if (favButton && cardType === 'query') {
+                    const storageKey = 'favoriteQuerys';
+                    const index = queryFavorites.indexOf(cardId);
 
-            if (favButton && cardType === 'query') {
-                const storageKey = 'favoriteQuerys';
-                const index = queryFavorites.indexOf(cardId);
+                    if (index > -1) {
+                        // Si ya existe, quitarlo
+                        queryFavorites.splice(index, 1);
+                    } else {
+                        // Si no existe, agregarlo
+                        queryFavorites.push(cardId);
+                    }
 
-                if (index > -1) {
-                    // Si ya existe, quitarlo
-                    queryFavorites.splice(index, 1);
-                } else {
-                    // Si no existe, agregarlo
-                    queryFavorites.push(cardId);
+                    // Guardar en localStorage y re-dibujar la vista
+                    localStorage.setItem(storageKey, JSON.stringify(queryFavorites));
+                    applyQueryFilters();
                 }
-
-                // Guardar en localStorage y re-dibujar la vista
-                localStorage.setItem(storageKey, JSON.stringify(queryFavorites));
-                applyQueryFilters();
-            }
             
             // --- Lógica de Opciones Admin ---
             if (optionsButton) {
@@ -1529,6 +1529,7 @@
 </body>
 
 </html>
+
 
 
 
