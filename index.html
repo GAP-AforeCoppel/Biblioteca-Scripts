@@ -374,12 +374,32 @@
             <button id="close-login-modal-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
         </div>
     </div>
+
+    <div id="register-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 relative">
+            <h2 class="text-2xl font-bold mb-2 text-center text-blue-800 dark:text-yellow-400">Solicitar Acceso</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">Tu solicitud será enviada al Superadministrador.</p>
+            
+            <form id="register-form">
+                <div class="space-y-4">
+                    <input type="text" id="reg-name" placeholder="Nombre Completo" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+                    <input type="email" id="reg-email" placeholder="Correo electrónico" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+                    <input type="password" id="reg-password" placeholder="Contraseña" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+                    <input type="text" id="reg-area" placeholder="Área / Puesto" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
+                </div>
+                <div class="mt-6">
+                    <button type="submit" class="w-full py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500 font-bold transition-colors">Enviar Solicitud</button>
+                </div>
+            </form>
+            <button id="close-reg-modal-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
+        </div>
+    </div>
     
     <script type="module">
         // --- IMPORTS DE FIREBASE (PRODUCCIÓN) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setLogLevel, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         
         // --- CONFIGURACIÓN DE PRODUCCIÓN (TU CÓDIGO ORIGINAL) ---
         const firebaseConfig = {
@@ -899,99 +919,155 @@
             }
         };
 
-        // --- VARIABLE PARA EL PROVEEDOR DE GOOGLE ---
-        const googleProvider = new GoogleAuthProvider();
+        // --- REFERENCIAS AL DOM PARA AUTH ---
+        const authControls = document.getElementById('auth-controls');
+        const registerModal = document.getElementById('register-modal');
+        
+        // --- FUNCIONES DE MODAL REGISTRO ---
+        const openRegModal = () => { registerModal.classList.remove('hidden'); setTimeout(() => registerModal.classList.remove('opacity-0'), 10); };
+        const closeRegModal = () => { registerModal.classList.add('opacity-0'); setTimeout(() => registerModal.classList.add('hidden'), 300); document.getElementById('register-form').reset(); };
+        
+        if(document.getElementById('close-reg-modal-btn')) document.getElementById('close-reg-modal-btn').addEventListener('click', closeRegModal);
 
-        // --- FUNCIÓN PARA EL BOTÓN DE LOGIN ---
-        const iniciarSesionConGoogle = async () => {
-            try {
-                await signInWithPopup(auth, googleProvider);
-            } catch (error) {
-                console.error("Error al iniciar sesión con Google:", error);
-                alert("Hubo un error al conectar con Google.");
-            }
-        };
+        // --- LÓGICA DE REGISTRO (CREAR USUARIO) ---
+        const registerForm = document.getElementById('register-form');
+        if(registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const name = document.getElementById('reg-name').value;
+                const area = document.getElementById('reg-area').value;
 
+                try {
+                    // 1. Crear usuario en Firebase Auth
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // 2. Guardar datos en Firestore con estado PENDING
+                    await setDoc(doc(db, "user_roles", user.uid), {
+                        email: email,
+                        displayName: name,
+                        area: area,
+                        role: 'viewer',    // Rol inicial bajo
+                        status: 'pending', // IMPORTANTE: Nace pendiente de aprobación
+                        createdAt: serverTimestamp()
+                    });
+
+                    // 3. Cerrar sesión inmediatamente (no dejar entrar hasta aprobación)
+                    await signOut(auth);
+                    
+                    closeRegModal();
+                    alert("Solicitud enviada con éxito. Por favor espera a que el Superadministrador active tu cuenta.");
+
+                } catch (error) {
+                    console.error("Error al registrar:", error);
+                    if(error.code === 'auth/email-already-in-use') {
+                        alert("Este correo ya está registrado.");
+                    } else {
+                        alert("Error al registrar: " + error.message);
+                    }
+                }
+            });
+        }
+
+        // --- OBSERVADOR DE ESTADO (LOGIN / VALIDACIÓN) ---
         onAuthStateChanged(auth, async (user) => {
-            // 1. Limpiar listeners anteriores para evitar duplicados
+            // Limpieza de listeners anteriores
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeRequests) unsubscribeRequests();
             if (unsubscribeQuerys) unsubscribeQuerys();
             if (unsubscribeQueryRequests) unsubscribeQueryRequests();
-            
+
             currentUserRole = null;
             userId = user ? user.uid : null;
-            
-            const authContainer = document.getElementById('auth-controls');
 
             if (user) {
-                // ============================================================
-                // CANDADO DE SEGURIDAD: VALIDACIÓN DE DOMINIO
-                // ============================================================
-                const email = user.email || '';
-                // AQUI ESTÁ LA MAGIA: Validamos los dos dominios permitidos
-                const dominioValido = email.endsWith('@aforecoppel.com') || email.endsWith('@coppel.com');
-
-                // Si NO tiene el dominio correcto, lo sacamos inmediatamente
-                if (!dominioValido) {
-                    await signOut(auth);
-                    alert("ACCESO DENEGADO: Esta herramienta es exclusiva para colaboradores con correo @aforecoppel.com o @coppel.com");
-                    return; // Detenemos la ejecución aquí
-                }
-
-                // --- SI PASA EL CANDADO, CARGAMOS TODO ---
-                console.log("Acceso autorizado para:", email);
-
+                console.log("Usuario autenticado, verificando estado...");
+                
                 try {
-                    // Obtener rol de usuario (Admin/Superadmin)
-                    const roleDocRef = doc(userRolesCollection, user.uid);
-                    const roleDocSnap = await getDoc(roleDocRef);
-                    
-                    if (roleDocSnap.exists()) {
-                        currentUserRole = roleDocSnap.data().role;
-                    } 
-                } catch (e) {
-                    console.error("Error al obtener rol:", e);
+                    // Consultar el documento del usuario en Firestore
+                    const userDocRef = doc(userRolesCollection, user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        
+                        // --- EL GRAN FILTRO: ¿ESTÁ ACTIVO? ---
+                        if (userData.status !== 'active') {
+                            // Si es 'pending' o cualquier otra cosa, lo sacamos
+                            await signOut(auth);
+                            alert("ACCESO DENEGADO: Tu cuenta está en revisión o ha sido desactivada.");
+                            return;
+                        }
+
+                        // Si está activo, procedemos
+                        currentUserRole = userData.role;
+                        
+                        // UI de usuario logueado
+                        authControls.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <div class="text-right hidden sm:block">
+                                    <div class="text-xs font-bold text-blue-800 dark:text-yellow-400">${userData.displayName || 'Usuario'}</div>
+                                    <div class="text-[10px] text-gray-500 uppercase">${currentUserRole}</div>
+                                </div>
+                                <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700 border border-red-200 px-3 py-1 rounded hover:bg-red-50">Salir</button>
+                            </div>
+                        `;
+                        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+                        // Cargar la App
+                        setupAdminUI(currentUserRole);
+                        setupFirestoreListeners();
+                        navigateTo(currentView);
+
+                    } else {
+                        // Usuario en Auth pero sin datos en Firestore (Superadmin original o error)
+                        // SOLUCIÓN TEMPORAL: Si es el superadmin original, permitir paso para que se auto-active
+                        // (Esto asume que tu ID de usuario ya tiene rol asignado, aunque le falte el status)
+                        console.log("Usuario sin status definido, revisando permisos...");
+                         // Intentar cargar de todas formas si ya tenías rol asignado manualmente antes
+                         // Si falla, tendrás que editar tu usuario en la consola de Firebase.
+                         await signOut(auth);
+                         alert("Error: Usuario sin perfil de datos.");
+                    }
+
+                } catch (error) {
+                    console.error("Error verificando usuario:", error);
+                    // Si falla por permisos (reglas de seguridad), mostramos error visual
+                    if(scriptsContainer) scriptsContainer.innerHTML = ''; 
+                    loadingIndicator.innerHTML = '<p class="text-red-500">No tienes permisos para ver esto.</p>';
                 }
-
-                // Mostrar botón de Salir y correo
-                authContainer.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-gray-500 hidden sm:block">${email}</span>
-                        <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700">Salir</button>
-                    </div>
-                `;
-                if(document.getElementById('logout-btn')) document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
-                // Configurar UI Admin y Cargar Datos de Firebase
-                setupAdminUI(currentUserRole);
-                setupFirestoreListeners();
-                navigateTo(currentView); 
 
             } else {
-                // --- USUARIO NO LOGUEADO (AQUI ELIMINAMOS EL LOGIN ANÓNIMO AUTOMÁTICO) ---
-                console.log("Usuario no identificado. Esperando login manual...");
+                // --- USUARIO NO LOGUEADO ---
+                console.log("Esperando inicio de sesión...");
                 
-                // Limpiar la pantalla para que no vean nada
+                // Limpiar interfaz (Bloqueo visual)
                 if(scriptsContainer) scriptsContainer.innerHTML = ''; 
                 if(querysContainer) querysContainer.innerHTML = '';
-                loadingIndicator.innerHTML = '<p class="text-gray-500">Por favor, inicia sesión para ver el contenido.</p>';
+                loadingIndicator.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md max-w-md mx-auto mt-10">
+                        
+                        <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200 mb-2">Contenido Protegido</h3>
+                        <p class="text-gray-500 dark:text-gray-400 text-center mb-6">Debes iniciar sesión para acceder a la biblioteca.</p>
+                    </div>
+                `;
+                
                 setupAdminUI(null);
 
-                // Mostrar botón de Login con Google
-                authContainer.innerHTML = `
-                    <button id="google-login-btn" class="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 font-bold py-2 px-4 rounded shadow-sm transition-all text-sm">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4" alt="G">
-                        Acceder con Coppel
+                // Botones de Login y Registro
+                authControls.innerHTML = `
+                    <button id="btn-login-popup" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow mr-2 text-sm transition-colors">
+                        Iniciar Sesión
                     </button>
-                    <button id="admin-login-btn" class="text-gray-400 hover:text-gray-600 ml-2" title="Acceso Admin Manual">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg>
+                    <button id="btn-register-popup" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow text-sm transition-colors">
+                        Solicitar Acceso
                     </button>
                 `;
                 
-                // Activar los listeners de los botones
-                if(document.getElementById('google-login-btn')) document.getElementById('google-login-btn').addEventListener('click', iniciarSesionConGoogle);
-                if(document.getElementById('admin-login-btn')) document.getElementById('admin-login-btn').addEventListener('click', openLoginModal);
+                if(document.getElementById('btn-login-popup')) document.getElementById('btn-login-popup').addEventListener('click', openLoginModal);
+                if(document.getElementById('btn-register-popup')) document.getElementById('btn-register-popup').addEventListener('click', openRegModal);
             }
         });
     
@@ -1559,6 +1635,7 @@
 </body>
 
 </html>
+
 
 
 
