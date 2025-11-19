@@ -437,6 +437,7 @@
         // --- DATOS ---
         let allScripts = [];
         let pendingRequests = [];
+        let pendingUsers = [];
         let allQuerys = [];
         let pendingQueryRequests = [];
         
@@ -781,37 +782,77 @@
             });
         };
 
-        const setupFirestoreListeners = () => {
+      const setupFirestoreListeners = () => {
+            // Limpiar escuchas anteriores si existen
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeQuerys) unsubscribeQuerys();
+            if (unsubscribeRequests) unsubscribeRequests(); // Agregamos limpieza de requests
             
+            // 1. Escuchar Scripts (Para todos)
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
                 loadingIndicator.style.display = 'none';
             });
 
+            // 2. Escuchar Querys (Para todos)
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
                 loadingIndicator.style.display = 'none';
             });
 
+            // 3. Escuchar Solicitudes (SOLO Superadmin)
             if (currentUserRole === 'superadmin') {
-                 // Lógica de solicitudes superadmin (simplificada para no saturar)
+                 
+                 // A. Solicitudes de Scripts/Querys (Cambios en contenido)
+                 unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
+                     pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+                     // Si el usuario está viendo la pestaña de solicitudes, refrescar la pantalla
+                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
+                         renderCombinedRequests();
+                     }
+                 });
+
+                 // B. Solicitudes de USUARIOS NUEVOS (Gente pidiendo entrar)
+                 // Escuchamos la colección de usuarios en tiempo real
+                 onSnapshot(userRolesCollection, (snapshot) => {
+                     // Filtramos solo los que tienen status 'pending'
+                     pendingUsers = snapshot.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() }))
+                        .filter(user => user.status === 'pending');
+                     
+                     // Si el usuario está viendo la pestaña de solicitudes, refrescar la pantalla
+                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
+                         renderCombinedRequests();
+                     }
+                 });
             }
         };
         
-        const applyScriptFilters = () => {
+      const applyScriptFilters = () => {
              if (!scriptsContainer) return;
              const searchTerm = scriptSearchInput.value.toLowerCase();
+             
+             // 1. Obtenemos la categoría activa
              const activeCategory = scriptFilters.querySelector('.active').dataset.category;
+             
+             // --- CAMBIO NUEVO AQUÍ ---
+             // Si la categoría es "Solicitudes", usamos la función especial y nos salimos
+             if (activeCategory === 'requests') {
+                 renderCombinedRequests(); 
+                 return; // Importante: Stop aquí para no cargar scripts normales
+             }
+             // -------------------------
+
              let filtered = allScripts;
              
+             // Filtros normales
              if (activeCategory === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
              else if (activeCategory === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
              else if (activeCategory !== 'all') filtered = allScripts.filter(s => s.category === activeCategory);
              
+             // Buscador
              if (searchTerm) filtered = filtered.filter(s => s.title.toLowerCase().includes(searchTerm) || s.description.toLowerCase().includes(searchTerm));
              
              renderScripts(filtered);
@@ -830,6 +871,128 @@
              if (searchTerm) filtered = filtered.filter(q => q.title.toLowerCase().includes(searchTerm) || q.description.toLowerCase().includes(searchTerm));
              
              renderQuerys(filtered);
+        };
+
+        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
+        const renderCombinedRequests = () => {
+            if(!scriptsContainer) return;
+            scriptsContainer.innerHTML = '';
+            
+            if (pendingUsers.length === 0 && pendingRequests.length === 0) {
+                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                return;
+            }
+
+            // 1. Renderizar USUARIOS Pendientes
+            pendingUsers.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
+                
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
+                        <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Registrado: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
+                    </div>
+                    <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
+                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Rechazar</button>
+                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Aprobar Acceso</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
+
+            // 2. Renderizar Solicitudes de SCRIPTS
+            pendingRequests.forEach(request => {
+                const req = request.data;
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+                
+                let actionText = '', actionColor = '';
+                if (req.action === 'add') { actionText = 'NUEVO SCRIPT'; actionColor = 'bg-green-500'; }
+                if (req.action === 'edit') { actionText = 'MODIFICACIÓN'; actionColor = 'bg-yellow-500'; }
+                if (req.action === 'delete') { actionText = 'ELIMINACIÓN'; actionColor = 'bg-red-500'; }
+
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                            <pre class="script-content font-sans">${req.scriptText}</pre>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Solicitado por: Admin</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
+                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
+                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
+        };
+
+        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
+        const renderCombinedRequests = () => {
+            if(!scriptsContainer) return;
+            scriptsContainer.innerHTML = '';
+            
+            if (pendingUsers.length === 0 && pendingRequests.length === 0) {
+                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                return;
+            }
+
+            // 1. PRIMERO: Renderizar USUARIOS Pendientes
+            pendingUsers.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
+                
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
+                        <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Registrado: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
+                    </div>
+                    <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
+                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Rechazar</button>
+                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Aprobar Acceso</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
+
+            // 2. DESPUÉS: Renderizar Solicitudes de SCRIPTS (Lo que ya tenías)
+            pendingRequests.forEach(request => {
+                const req = request.data;
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+                
+                let actionText = '', actionColor = '';
+                if (req.action === 'add') { actionText = 'NUEVO SCRIPT'; actionColor = 'bg-green-500'; }
+                if (req.action === 'edit') { actionText = 'MODIFICACIÓN'; actionColor = 'bg-yellow-500'; }
+                if (req.action === 'delete') { actionText = 'ELIMINACIÓN'; actionColor = 'bg-red-500'; }
+
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                            <pre class="script-content font-sans">${req.scriptText}</pre>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Solicitado por: Admin</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
+                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
+                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
         };
 
         const navigateTo = (view) => {
@@ -860,6 +1023,24 @@
 
         // --- EVENT LISTENERS GLOBALES ---
         document.getElementById('app-container').addEventListener('click', async (e) => {
+        // --- LÓGICA DE APROBACIÓN DE USUARIOS ---
+            if (e.target.closest('.approve-user-btn')) {
+                const uid = e.target.closest('.approve-user-btn').dataset.userid;
+                if(confirm('¿Aprobar acceso a este usuario?')) {
+                    // Cambiamos estatus a 'active' y rol a 'viewer' (o 'admin' si prefieres)
+                    await updateDoc(doc(userRolesCollection, uid), { status: 'active', role: 'viewer' });
+                    alert("Usuario aprobado con éxito.");
+                }
+            }
+            
+            if (e.target.closest('.reject-user-btn')) {
+                const uid = e.target.closest('.reject-user-btn').dataset.userid;
+                if(confirm('¿Rechazar y eliminar solicitud?')) {
+                    // Borramos el documento para que desaparezca
+                    await deleteDoc(doc(userRolesCollection, uid));
+                    alert("Solicitud rechazada y eliminada.");
+                }
+            }
             const card = e.target.closest('[data-id]');
             if (!card) return;
             const id = card.dataset.id;
@@ -1141,6 +1322,7 @@
 </body>
 
 </html>
+
 
 
 
