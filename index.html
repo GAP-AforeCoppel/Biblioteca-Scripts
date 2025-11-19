@@ -788,27 +788,25 @@
             if (unsubscribeQuerys) unsubscribeQuerys();
             if (unsubscribeRequests) unsubscribeRequests();
             
-            // 1. Escuchar Scripts (Con manejo de errores)
+            // 1. Escuchar Scripts (Con manejo de errores visual)
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
                 loadingIndicator.style.display = 'none'; // ¡Éxito! Ocultamos cargando
             }, (error) => {
                 console.error("Error cargando scripts:", error);
-                loadingIndicator.innerHTML = `<p class="text-red-500 text-center p-4">Error de Permisos: No puedes ver los scripts.<br><span class="text-xs text-gray-500">${error.message}</span></p>`;
+                loadingIndicator.innerHTML = `<p class="text-red-500 text-center p-4">Error de Permisos.<br><span class="text-xs text-gray-500">${error.message}</span></p>`;
             });
 
-            // 2. Escuchar Querys (Con manejo de errores)
+            // 2. Escuchar Querys
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
-                // No ocultamos loading aquí para no conflictuar con scripts, pero manejamos el error
-            }, (error) => {
-                console.error("Error cargando querys:", error);
-            });
+            }, (error) => console.error("Error querys:", error));
 
             // 3. Escuchar Solicitudes (SOLO Superadmin)
             if (currentUserRole === 'superadmin') {
+                 // A. Solicitudes de Contenido
                  unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
                      pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
                      if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
@@ -816,27 +814,12 @@
                      }
                  });
 
+                 // B. Solicitudes de Usuarios Nuevos
                  onSnapshot(userRolesCollection, (snapshot) => {
                      pendingUsers = snapshot.docs
                         .map(doc => ({ id: doc.id, ...doc.data() }))
                         .filter(user => user.status === 'pending');
                      
-                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
-                         renderCombinedRequests();
-                     }
-                 }, (error) => console.warn("Error cargando usuarios:", error));
-            }
-        };
-
-                 // B. Solicitudes de USUARIOS NUEVOS (Gente pidiendo entrar)
-                 // Escuchamos la colección de usuarios en tiempo real
-                 onSnapshot(userRolesCollection, (snapshot) => {
-                     // Filtramos solo los que tienen status 'pending'
-                     pendingUsers = snapshot.docs
-                        .map(doc => ({ id: doc.id, ...doc.data() }))
-                        .filter(user => user.status === 'pending');
-                     
-                     // Si el usuario está viendo la pestaña de solicitudes, refrescar la pantalla
                      if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
                          renderCombinedRequests();
                      }
@@ -1336,6 +1319,7 @@
 </body>
 
 </html>
+
 
 
 
