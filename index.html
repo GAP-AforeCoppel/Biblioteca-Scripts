@@ -788,14 +788,15 @@
             if (unsubscribeQuerys) unsubscribeQuerys();
             if (unsubscribeRequests) unsubscribeRequests();
             
-            // 1. Escuchar Scripts (Con manejo de errores visual)
+            // 1. Escuchar Scripts (Con detector de errores)
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
-                loadingIndicator.style.display = 'none'; // ¡Éxito! Ocultamos cargando
+                loadingIndicator.style.display = 'none'; // ¡Éxito!
             }, (error) => {
                 console.error("Error cargando scripts:", error);
-                loadingIndicator.innerHTML = `<p class="text-red-500 text-center p-4">Error de Permisos.<br><span class="text-xs text-gray-500">${error.message}</span></p>`;
+                // Si falla, mostramos el error en la pantalla en lugar de "Cargando..."
+                loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ Error de Permisos.<br><span class="text-xs font-normal text-gray-500">${error.message}</span></div>`;
             });
 
             // 2. Escuchar Querys
@@ -1319,6 +1320,7 @@
 </body>
 
 </html>
+
 
 
 
