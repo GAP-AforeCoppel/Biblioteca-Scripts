@@ -770,6 +770,67 @@
                 }
             });
         };
+
+        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
+        const renderCombinedRequests = () => {
+            if(!scriptsContainer) return;
+            scriptsContainer.innerHTML = '';
+            
+            if (pendingUsers.length === 0 && pendingRequests.length === 0) {
+                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                return;
+            }
+
+            // 1. Renderizar USUARIOS Pendientes
+            pendingUsers.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
+                
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
+                        <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Registrado: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
+                    </div>
+                    <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
+                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Rechazar</button>
+                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Aprobar Acceso</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
+
+            // 2. Renderizar Solicitudes de SCRIPTS
+            pendingRequests.forEach(request => {
+                const req = request.data;
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+                
+                let actionText = '', actionColor = '';
+                if (req.action === 'add') { actionText = 'NUEVO SCRIPT'; actionColor = 'bg-green-500'; }
+                if (req.action === 'edit') { actionText = 'MODIFICACIÓN'; actionColor = 'bg-yellow-500'; }
+                if (req.action === 'delete') { actionText = 'ELIMINACIÓN'; actionColor = 'bg-red-500'; }
+
+                card.innerHTML = `
+                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
+                            <pre class="script-content font-sans">${req.scriptText}</pre>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Solicitado por: Admin</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
+                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
+                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
+                    </div>
+                `;
+                scriptsContainer.appendChild(card);
+            });
+        };
         
         // --- LISTENERS Y UTILIDADES ---
         const setupAdminUI = (role) => {
@@ -1320,6 +1381,7 @@
 </body>
 
 </html>
+
 
 
 
