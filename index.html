@@ -396,7 +396,7 @@
     </div>
     
     <script type="module">
-       // --- IMPORTS DE FIREBASE ---
+      // --- IMPORTS DE FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
@@ -575,21 +575,20 @@
                     window.location.reload();
                 }
             } else {
-                // --- ESTADO: NO LOGUEADO ---
+                // NO LOGUEADO
                 console.log("Esperando login...");
-                
-                // 1. Limpiar contenido de fondo
                 if(scriptsContainer) scriptsContainer.innerHTML = ''; 
                 if(querysContainer) querysContainer.innerHTML = '';
                 
-                // 2. Limpiar barra superior (para que no estorbe)
-                if(authControls) authControls.innerHTML = '';
+                if(authControls) authControls.innerHTML = ''; // Limpiar barra superior
 
-                // 3. MOSTRAR BOTONES EN EL CENTRO (Solución Definitiva)
                 loadingIndicator.style.display = 'block';
                 loadingIndicator.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md mx-auto mt-10 border border-gray-200 dark:border-gray-700">
-                                                <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2 mt-4">Acceso Restringido</h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2 mt-2">Acceso Restringido</h3>
                         <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Esta biblioteca es exclusiva para colaboradores autorizados.</p>
                         
                         <div class="flex flex-col w-full gap-4">
@@ -604,13 +603,7 @@
                 `;
                 
                 setupAdminUI(null);
-
-                // 4. Activar los botones del centro
-                const btnLogin = document.getElementById('btn-login-center');
-                const btnRegister = document.getElementById('btn-register-center');
-
-                if(btnLogin) btnLogin.addEventListener('click', openLoginModal);
-                if(btnRegister) btnRegister.addEventListener('click', openRegModal);
+                // Nota: Los listeners de estos botones se manejan en el Listener Global de abajo
             }
         });
 
@@ -695,7 +688,7 @@
              renderQuerys(filtered);
         };
 
-        // --- RENDERIZADO DE SOLICITUDES ---
+        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
         const renderCombinedRequests = () => {
             if(!scriptsContainer) return;
             scriptsContainer.innerHTML = '';
@@ -705,6 +698,7 @@
                 return;
             }
 
+            // 1. Renderizar USUARIOS Pendientes
             pendingUsers.forEach(user => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
@@ -723,6 +717,7 @@
                 scriptsContainer.appendChild(card);
             });
 
+            // 2. Renderizar Solicitudes de SCRIPTS
             pendingRequests.forEach(request => {
                 const req = request.data;
                 const card = document.createElement('div');
@@ -868,8 +863,19 @@
         };
 
         // --- EVENT LISTENERS GLOBALES ---
+        // 1. AQUÍ CONECTAMOS LOS BOTONES DE LOGIN/REGISTRO CENTRADOS
         document.getElementById('app-container').addEventListener('click', async (e) => {
-            // --- APROBACIÓN DE USUARIOS ---
+            // Botones de login/registro inyectados dinámicamente
+            if (e.target.closest('#btn-login-center') || e.target.closest('#btn-login-popup')) {
+                openLoginModal();
+                return;
+            }
+            if (e.target.closest('#btn-register-center') || e.target.closest('#btn-register-popup')) {
+                openRegModal();
+                return;
+            }
+
+            // Aprobación de Usuarios
             if (e.target.closest('.approve-user-btn')) {
                 const uid = e.target.closest('.approve-user-btn').dataset.userid;
                 if(confirm('¿Aprobar acceso a este usuario?')) {
@@ -878,6 +884,7 @@
                 }
                 return;
             }
+            // Rechazo de Usuarios
             if (e.target.closest('.reject-user-btn')) {
                 const uid = e.target.closest('.reject-user-btn').dataset.userid;
                 if(confirm('¿Rechazar y eliminar solicitud?')) {
@@ -887,6 +894,7 @@
                 return;
             }
             
+            // Tarjetas y acciones
             const card = e.target.closest('[data-id]');
             if (!card) return;
             const id = card.dataset.id;
@@ -933,7 +941,30 @@
             }
         });
 
-        // --- LÓGICA DE ADMINISTRACIÓN ---
+        // Modales Generales
+        const loginModal = document.getElementById('login-modal');
+        const openLoginModal = () => { loginModal.classList.remove('hidden'); setTimeout(()=>loginModal.classList.remove('opacity-0'),10); };
+        const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(()=>loginModal.classList.add('hidden'),300); };
+        document.getElementById('close-login-modal-btn').addEventListener('click', closeLoginModal);
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+                closeLoginModal();
+            } catch(e) { alert("Error: Credenciales incorrectas o usuario no activo."); }
+        });
+
+        // Tema
+        const toggleTheme = () => {
+             document.documentElement.classList.toggle('dark');
+             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        };
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+        // ==========================================
+        // --- LÓGICA DE ADMINISTRACIÓN (AGREGAR/EDITAR/ELIMINAR) ---
+        // ==========================================
+
         const itemModal = document.getElementById('add-item-modal');
         const itemForm = document.getElementById('script-form');
         const modalTitle = document.getElementById('modal-title');
@@ -942,68 +973,90 @@
         const deleteModalText = document.getElementById('delete-modal-text');
         let itemToDelete = null;
 
-        document.getElementById('add-item-btn').addEventListener('click', () => {
-            modalTitle.textContent = currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query';
-            itemForm.reset();
-            itemIdInput.value = '';
-            
-            const scriptCat = document.getElementById('item-category-script');
-            const queryCat = document.getElementById('item-category-query');
-            const varsInput = document.getElementById('item-variables');
+        // --- ABRIR MODAL (AGREGAR) ---
+        const addItemBtn = document.getElementById('add-item-btn');
+        if(addItemBtn) {
+            addItemBtn.addEventListener('click', () => {
+                modalTitle.textContent = currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query';
+                itemForm.reset();
+                itemIdInput.value = '';
+                
+                const scriptCat = document.getElementById('item-category-script');
+                const queryCat = document.getElementById('item-category-query');
+                const varsInput = document.getElementById('item-variables');
 
-            if (currentView === 'scripts') {
-                scriptCat.classList.remove('hidden'); scriptCat.required = true;
-                queryCat.classList.add('hidden'); queryCat.required = false;
-                varsInput.classList.remove('hidden');
-            } else {
-                scriptCat.classList.add('hidden'); scriptCat.required = false;
-                queryCat.classList.remove('hidden'); queryCat.required = true;
-                varsInput.classList.add('hidden');
-            }
-            itemModal.classList.remove('hidden');
-            setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
-        });
+                if (currentView === 'scripts') {
+                    scriptCat.classList.remove('hidden'); scriptCat.required = true;
+                    queryCat.classList.add('hidden'); queryCat.required = false;
+                    varsInput.classList.remove('hidden');
+                } else {
+                    scriptCat.classList.add('hidden'); scriptCat.required = false;
+                    queryCat.classList.remove('hidden'); queryCat.required = true;
+                    varsInput.classList.add('hidden');
+                }
 
+                itemModal.classList.remove('hidden');
+                setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
+            });
+        }
+
+        // --- CERRAR MODAL ---
         const closeItemModal = () => {
             itemModal.classList.add('opacity-0');
             setTimeout(() => itemModal.classList.add('hidden'), 300);
         };
-        document.getElementById('cancel-btn').addEventListener('click', closeItemModal);
-        document.getElementById('close-modal-btn').addEventListener('click', closeItemModal);
+        if(document.getElementById('cancel-btn')) document.getElementById('cancel-btn').addEventListener('click', closeItemModal);
+        if(document.getElementById('close-modal-btn')) document.getElementById('close-modal-btn').addEventListener('click', closeItemModal);
 
-        itemForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = itemIdInput.value;
-            const isEdit = !!id;
-            const collectionRef = currentView === 'scripts' ? scriptsCollection : querysCollection;
-            const requestsRef = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
-            
-            const data = {
-                title: document.getElementById('item-title').value,
-                description: document.getElementById('item-description').value,
-                scriptText: document.getElementById('item-text').value,
-                category: currentView === 'scripts' ? document.getElementById('item-category-script').value : document.getElementById('item-category-query').value,
-                variables: currentView === 'scripts' ? document.getElementById('item-variables').value.split(',').map(v=>v.trim()).filter(v=>v) : [],
-                updatedAt: serverTimestamp(),
-                lastUpdatedBy: auth.currentUser.uid
-            };
+        // --- GUARDAR (SUBMIT) ---
+        if(itemForm) {
+            itemForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = itemIdInput.value;
+                const isEdit = !!id;
+                
+                const collectionRef = currentView === 'scripts' ? scriptsCollection : querysCollection;
+                const requestsRef = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
+                
+                const data = {
+                    title: document.getElementById('item-title').value,
+                    description: document.getElementById('item-description').value,
+                    scriptText: document.getElementById('item-text').value,
+                    category: currentView === 'scripts' ? document.getElementById('item-category-script').value : document.getElementById('item-category-query').value,
+                    variables: currentView === 'scripts' ? document.getElementById('item-variables').value.split(',').map(v=>v.trim()).filter(v=>v) : [],
+                    updatedAt: serverTimestamp(),
+                    lastUpdatedBy: auth.currentUser.uid
+                };
 
-            try {
-                if (currentUserRole === 'superadmin') {
-                    if (isEdit) await updateDoc(doc(collectionRef, id), data);
-                    else { data.copyCount = 0; await addDoc(collectionRef, data); }
-                    alert(isEdit ? "Actualizado correctamente" : "Creado correctamente");
-                } else {
-                    await addDoc(requestsRef, { ...data, action: isEdit ? 'edit' : 'add', originalId: id || null, status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
-                    alert("Solicitud enviada al Superadministrador.");
+                try {
+                    if (currentUserRole === 'superadmin') {
+                        if (isEdit) {
+                            await updateDoc(doc(collectionRef, id), data);
+                        } else {
+                            data.copyCount = 0; 
+                            await addDoc(collectionRef, data);
+                        }
+                        alert(isEdit ? "Actualizado correctamente" : "Creado correctamente");
+                    } else {
+                        await addDoc(requestsRef, {
+                            ...data,
+                            action: isEdit ? 'edit' : 'add',
+                            originalId: id || null,
+                            status: 'pending',
+                            requestedBy: auth.currentUser.uid,
+                            timestamp: serverTimestamp()
+                        });
+                        alert("Solicitud enviada al Superadministrador.");
+                    }
+                    closeItemModal();
+                } catch (error) {
+                    console.error("Error al guardar:", error);
+                    alert("Error: " + error.message);
                 }
-                closeItemModal();
-            } catch (error) {
-                console.error("Error al guardar:", error);
-                alert("Error: " + error.message);
-            }
-        });
+            });
+        }
 
+        // --- EDITAR (Lógica para llenar el formulario) ---
         const handleEditClick = (id, type) => {
             const list = type === 'scripts' ? allScripts : allQuerys;
             const item = list.find(i => i.id === id);
@@ -1030,45 +1083,63 @@
             setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
 
+        // --- ELIMINAR ---
         const handleDeleteClick = (id, type) => {
             itemToDelete = { id, type };
             const list = type === 'scripts' ? allScripts : allQuerys;
             const item = list.find(i => i.id === id);
-            deleteModalText.textContent = currentUserRole === 'superadmin' ? `¿Eliminar "${item.title}" permanentemente?` : `¿Solicitar eliminar "${item.title}"?`;
+            
+            deleteModalText.textContent = currentUserRole === 'superadmin' 
+                ? `¿Eliminar "${item.title}" permanentemente?` 
+                : `¿Solicitar eliminar "${item.title}"?`;
+            
             deleteModal.classList.remove('hidden');
             setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
         };
 
-        document.getElementById('cancel-delete-btn').addEventListener('click', () => {
-             deleteModal.classList.add('opacity-0');
-             setTimeout(() => deleteModal.classList.add('hidden'), 300);
-        });
+        if(document.getElementById('cancel-delete-btn')) {
+            document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+                 deleteModal.classList.add('opacity-0');
+                 setTimeout(() => deleteModal.classList.add('hidden'), 300);
+            });
+        }
 
-        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-            if (!itemToDelete) return;
-            const { id, type } = itemToDelete;
-            const collectionRef = type === 'scripts' ? scriptsCollection : querysCollection;
-            try {
-                if (currentUserRole === 'superadmin') {
-                    await deleteDoc(doc(collectionRef, id));
-                    alert("Eliminado correctamente");
-                } else {
-                    const requestsRef = type === 'scripts' ? requestsCollection : queryRequestsCollection;
-                    const list = type === 'scripts' ? allScripts : allQuerys;
-                    const item = list.find(i => i.id === id);
-                    await addDoc(requestsRef, { originalId: id, title: item.title, action: 'delete', status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
-                    alert("Solicitud de eliminación enviada.");
+        if(document.getElementById('confirm-delete-btn')) {
+            document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+                if (!itemToDelete) return;
+                const { id, type } = itemToDelete;
+                const collectionRef = type === 'scripts' ? scriptsCollection : querysCollection;
+                
+                try {
+                    if (currentUserRole === 'superadmin') {
+                        await deleteDoc(doc(collectionRef, id));
+                        alert("Eliminado correctamente");
+                    } else {
+                        const requestsRef = type === 'scripts' ? requestsCollection : queryRequestsCollection;
+                        const list = type === 'scripts' ? allScripts : allQuerys;
+                        const item = list.find(i => i.id === id);
+                        await addDoc(requestsRef, {
+                            originalId: id,
+                            title: item.title,
+                            action: 'delete',
+                            status: 'pending',
+                            requestedBy: auth.currentUser.uid,
+                            timestamp: serverTimestamp()
+                        });
+                        alert("Solicitud de eliminación enviada.");
+                    }
+                    deleteModal.classList.add('opacity-0');
+                    setTimeout(() => deleteModal.classList.add('hidden'), 300);
+                } catch (e) {
+                    console.error(e);
+                    alert("Error al eliminar");
                 }
-                deleteModal.classList.add('opacity-0');
-                setTimeout(() => deleteModal.classList.add('hidden'), 300);
-            } catch (e) {
-                console.error(e);
-                alert("Error al eliminar");
-            }
-        });
+            });
+        }
     </script>
 </body>
 </html>
+
 
 
 
