@@ -426,6 +426,7 @@
 
         // --- ESTADO GLOBAL ---
         let currentView = 'scripts';
+        let isRegistering = false;
         let currentUserRole = null;
         let userId = null;
         let favorites = JSON.parse(localStorage.getItem('favoriteScripts')) || [];
@@ -480,10 +481,16 @@
                 const name = document.getElementById('reg-name').value;
                 const area = document.getElementById('reg-area').value;
 
+                // 1. ACTIVAMOS LA BANDERA: "No molestar, estoy registrando"
+                isRegistering = true;
+
                 try {
+                    // 2. Crear usuario en Firebase Auth (Esto loguea automáticamente)
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
+                    // 3. Guardar datos en Firestore
+                    // Ahora sí tenemos tiempo de guardar porque el observer no nos interrumpirá
                     await setDoc(doc(db, "user_roles", user.uid), {
                         email: email,
                         displayName: name,
@@ -493,19 +500,32 @@
                         createdAt: serverTimestamp()
                     });
 
-                    await signOut(auth);
+                    // 4. Cerrar modal y mostrar mensaje AMIGABLE
                     closeRegModal();
-                    alert("Solicitud enviada. Espera aprobación del Superadministrador.");
+                    alert("✅ ¡Solicitud enviada correctamente!\n\nTu usuario ha sido creado. Por favor espera a que el Superadministrador active tu cuenta para poder ingresar.");
+
+                    // 5. Ahora sí, cerramos la sesión manualmente
+                    await signOut(auth);
 
                 } catch (error) {
                     console.error("Error registro:", error);
-                    alert("Error: " + error.message);
+                    if(error.code === 'auth/email-already-in-use') {
+                        alert("Este correo ya está registrado. Intenta iniciar sesión.");
+                    } else {
+                        alert("Hubo un error al enviar la solicitud: " + error.message);
+                    }
+                } finally {
+                    // 6. DESACTIVAMOS LA BANDERA: "Ya terminé"
+                    isRegistering = false;
                 }
             });
         }
 
-        // --- LÓGICA PRINCIPAL DE AUTENTICACIÓN ---
+       // --- LÓGICA PRINCIPAL DE AUTENTICACIÓN ---
         onAuthStateChanged(auth, async (user) => {
+            // SI ESTAMOS REGISTRANDO, NO HACEMOS NADA (DEJAMOS QUE TERMINE EL PROCESO)
+            if (isRegistering) return;
+
             // Limpiar todo al cambiar estado
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeRequests) unsubscribeRequests();
@@ -524,13 +544,19 @@
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
                         
-                        // VALIDACIÓN CRÍTICA DE ESTATUS
+                        // VALIDACIÓN DE ESTATUS
                         if (userData.status !== 'active') {
                             await signOut(auth);
-                            alert("ACCESO DENEGADO: Tu cuenta está en revisión.");
+                            // Mensaje amigable dependiendo del estado
+                            if (userData.status === 'pending') {
+                                alert("⏳ Tu cuenta está en revisión.\n\nYa hemos recibido tu solicitud. Podrás acceder en cuanto el administrador te apruebe.");
+                            } else {
+                                alert("⛔ Acceso denegado.\n\nTu cuenta ha sido desactivada o rechazada.");
+                            }
                             return;
                         }
 
+                        // SI ES ACTIVO, PASAMOS
                         currentUserRole = userData.role;
                         
                         // Renderizar UI de Usuario
@@ -550,14 +576,16 @@
                         navigateTo(currentView);
 
                     } else {
-                        // Usuario existe en Auth pero no en BD (Error raro)
+                        // Caso raro: Usuario existe en Auth pero no se guardó en BD (quizás por el error anterior)
                         console.log("Usuario sin perfil en BD.");
                         await signOut(auth);
-                        alert("Error: Usuario sin perfil de datos.");
+                        alert("⚠️ Ocurrió un error con tu registro.\n\nNo se encontraron tus datos. Por favor intenta registrarte de nuevo o contacta a soporte.");
                     }
                 } catch (error) {
                     console.error("Error verificando:", error);
-                    loadingIndicator.innerHTML = '<p class="text-red-500">Error de conexión o permisos.</p>';
+                    await signOut(auth);
+                    loadingIndicator.innerHTML = '<p class="text-red-500">Error de conexión. Recargando...</p>';
+                    window.location.reload();
                 }
             } else {
                 // NO LOGUEADO
@@ -583,7 +611,7 @@
                 if(document.getElementById('btn-register-popup')) document.getElementById('btn-register-popup').addEventListener('click', openRegModal);
             }
         });
-
+        
         // --- FUNCIONES DE RENDERIZADO ---
        const renderScripts = (scriptsToRender) => {
             if(!scriptsContainer) return;
@@ -1113,6 +1141,7 @@
 </body>
 
 </html>
+
 
 
 
