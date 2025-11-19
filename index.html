@@ -575,43 +575,42 @@
                     window.location.reload();
                 }
             } else {
-                // NO LOGUEADO
+                // --- ESTADO: NO LOGUEADO ---
                 console.log("Esperando login...");
                 
-                // 1. Limpiar pantalla
+                // 1. Limpiar contenido de fondo
                 if(scriptsContainer) scriptsContainer.innerHTML = ''; 
                 if(querysContainer) querysContainer.innerHTML = '';
                 
-                // 2. Mostrar Candado (Aseguramos que sea visible)
+                // 2. Limpiar barra superior (para que no estorbe)
+                if(authControls) authControls.innerHTML = '';
+
+                // 3. MOSTRAR BOTONES EN EL CENTRO (Solución Definitiva)
                 loadingIndicator.style.display = 'block';
                 loadingIndicator.innerHTML = `
-                    <div class="flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md max-w-md mx-auto mt-10">
-                        <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200 mb-2">Contenido Protegido</h3>
-                        <p class="text-gray-500 dark:text-gray-400 text-center mb-6">Debes iniciar sesión para ver la biblioteca.</p>
+                    <div class="flex flex-col items-center justify-center p-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md mx-auto mt-10 border border-gray-200 dark:border-gray-700">
+                                                <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2 mt-4">Acceso Restringido</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Esta biblioteca es exclusiva para colaboradores autorizados.</p>
+                        
+                        <div class="flex flex-col w-full gap-4">
+                            <button id="btn-login-center" style="background-color: #2563EB;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">
+                                Iniciar Sesión
+                            </button>
+                            <button id="btn-register-center" style="background-color: #16A34A;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">
+                                Solicitar Acceso
+                            </button>
+                        </div>
                     </div>
                 `;
                 
                 setupAdminUI(null);
 
-                // 3. DIBUJAR BOTONES (CON ESTILOS FORZADOS PARA QUE SE VEAN SÍ O SÍ)
-                authControls.innerHTML = `
-                    <div style="display: flex; gap: 10px;">
-                        <button id="btn-login-popup" style="background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold;">
-                            Iniciar Sesión
-                        </button>
-                        <button id="btn-register-popup" style="background-color: #16A34A; color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold;">
-                            Solicitar Acceso
-                        </button>
-                    </div>
-                `;
-                
-                // 4. Activar los clicks
-                if(document.getElementById('btn-login-popup')) {
-                    document.getElementById('btn-login-popup').addEventListener('click', openLoginModal);
-                }
-                if(document.getElementById('btn-register-popup')) {
-                    document.getElementById('btn-register-popup').addEventListener('click', openRegModal);
-                }
+                // 4. Activar los botones del centro
+                const btnLogin = document.getElementById('btn-login-center');
+                const btnRegister = document.getElementById('btn-register-center');
+
+                if(btnLogin) btnLogin.addEventListener('click', openLoginModal);
+                if(btnRegister) btnRegister.addEventListener('click', openRegModal);
             }
         });
 
@@ -1070,6 +1069,7 @@
     </script>
 </body>
 </html>
+
 
 
 
