@@ -780,6 +780,58 @@
             });
         };
 
+        // --- FUNCIÓN FALTANTE: RENDERIZADO DE SOLICITUDES ---
+    const renderCombinedRequests = () => {
+        if(!scriptsContainer) return;
+        scriptsContainer.innerHTML = '';
+        
+        if (pendingUsers.length === 0 && pendingRequests.length === 0) {
+            scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+            return;
+        }
+
+        // 1. Renderizar USUARIOS Pendientes
+        pendingUsers.forEach(user => {
+            const card = document.createElement('div');
+            card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
+            card.innerHTML = `
+                <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
+                    <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Fecha: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
+                </div>
+                <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
+                    <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Rechazar</button>
+                    <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Aprobar</button>
+                </div>`;
+            scriptsContainer.appendChild(card);
+        });
+
+        // 2. Renderizar Solicitudes de SCRIPTS
+        pendingRequests.forEach(request => {
+            const req = request.data;
+            const card = document.createElement('div');
+            card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+            let color = req.action === 'add' ? 'bg-green-500' : (req.action === 'delete' ? 'bg-red-500' : 'bg-yellow-500');
+            let text = req.action === 'add' ? 'NUEVO' : (req.action === 'delete' ? 'ELIMINAR' : 'EDITAR');
+            
+            card.innerHTML = `
+                <div class="absolute top-2 right-2 px-2 py-1 ${color} text-white text-xs font-bold rounded-full">${text}</div>
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
+                    <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm overflow-y-auto max-h-48"><pre class="font-sans">${req.scriptText}</pre></div>
+                </div>
+                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
+                    <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Rechazar</button>
+                    <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Aprobar</button>
+                </div>`;
+            scriptsContainer.appendChild(card);
+        });
+    };
+
         // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
         const renderCombinedRequests = () => {
             if(!scriptsContainer) return;
@@ -904,19 +956,6 @@
                          renderCombinedRequests();
                      }
                  }, (e) => console.log("Info usuarios: " + e.message));
-            }
-        };
-
-                 // B. Solicitudes de Usuarios Nuevos
-                 onSnapshot(userRolesCollection, (snapshot) => {
-                     pendingUsers = snapshot.docs
-                        .map(doc => ({ id: doc.id, ...doc.data() }))
-                        .filter(user => user.status === 'pending');
-                     
-                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
-                         renderCombinedRequests();
-                     }
-                 });
             }
         };
         
@@ -1412,6 +1451,7 @@
 </body>
 
 </html>
+
 
 
 
