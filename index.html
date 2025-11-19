@@ -441,7 +441,7 @@
         let allQuerys = [];
         let pendingQueryRequests = [];
         
-        // --- LISTENERS (Para limpiarlos al salir) ---
+        // --- LISTENERS ---
         let unsubscribeScripts = null;
         let unsubscribeRequests = null;
         let unsubscribeQuerys = null;
@@ -482,16 +482,12 @@
                 const name = document.getElementById('reg-name').value;
                 const area = document.getElementById('reg-area').value;
 
-                // 1. ACTIVAMOS LA BANDERA: "No molestar, estoy registrando"
                 isRegistering = true;
 
                 try {
-                    // 2. Crear usuario en Firebase Auth (Esto loguea automáticamente)
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
-                    // 3. Guardar datos en Firestore
-                    // Ahora sí tenemos tiempo de guardar porque el observer no nos interrumpirá
                     await setDoc(doc(db, "user_roles", user.uid), {
                         email: email,
                         displayName: name,
@@ -501,11 +497,8 @@
                         createdAt: serverTimestamp()
                     });
 
-                    // 4. Cerrar modal y mostrar mensaje AMIGABLE
                     closeRegModal();
-                    alert("✅ ¡Solicitud enviada correctamente!\n\nTu usuario ha sido creado. Por favor espera a que el Superadministrador active tu cuenta para poder ingresar.");
-
-                    // 5. Ahora sí, cerramos la sesión manualmente
+                    alert("✅ ¡Solicitud enviada correctamente!\n\nTu usuario ha sido creado. Por favor espera a que el Superadministrador active tu cuenta.");
                     await signOut(auth);
 
                 } catch (error) {
@@ -513,21 +506,19 @@
                     if(error.code === 'auth/email-already-in-use') {
                         alert("Este correo ya está registrado. Intenta iniciar sesión.");
                     } else {
-                        alert("Hubo un error al enviar la solicitud: " + error.message);
+                        alert("Hubo un error: " + error.message);
                     }
                 } finally {
-                    // 6. DESACTIVAMOS LA BANDERA: "Ya terminé"
                     isRegistering = false;
                 }
             });
         }
 
-       // --- LÓGICA PRINCIPAL DE AUTENTICACIÓN ---
+        // --- LÓGICA PRINCIPAL DE AUTENTICACIÓN ---
         onAuthStateChanged(auth, async (user) => {
-            // SI ESTAMOS REGISTRANDO, NO HACEMOS NADA (DEJAMOS QUE TERMINE EL PROCESO)
             if (isRegistering) return;
 
-            // Limpiar todo al cambiar estado
+            // Limpiar listeners anteriores
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeRequests) unsubscribeRequests();
             if (unsubscribeQuerys) unsubscribeQuerys();
@@ -545,22 +536,18 @@
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
                         
-                        // VALIDACIÓN DE ESTATUS
                         if (userData.status !== 'active') {
                             await signOut(auth);
-                            // Mensaje amigable dependiendo del estado
                             if (userData.status === 'pending') {
-                                alert("⏳ Tu cuenta está en revisión.\n\nYa hemos recibido tu solicitud. Podrás acceder en cuanto el administrador te apruebe.");
+                                alert("⏳ Tu cuenta está en revisión.");
                             } else {
-                                alert("⛔ Acceso denegado.\n\nTu cuenta ha sido desactivada o rechazada.");
+                                alert("⛔ Acceso denegado.");
                             }
                             return;
                         }
 
-                        // SI ES ACTIVO, PASAMOS
                         currentUserRole = userData.role;
                         
-                        // Renderizar UI de Usuario
                         authControls.innerHTML = `
                             <div class="flex items-center gap-3">
                                 <div class="text-right hidden sm:block">
@@ -577,10 +564,9 @@
                         navigateTo(currentView);
 
                     } else {
-                        // Caso raro: Usuario existe en Auth pero no se guardó en BD (quizás por el error anterior)
                         console.log("Usuario sin perfil en BD.");
                         await signOut(auth);
-                        alert("⚠️ Ocurrió un error con tu registro.\n\nNo se encontraron tus datos. Por favor intenta registrarte de nuevo o contacta a soporte.");
+                        alert("⚠️ Usuario no encontrado en la base de datos.");
                     }
                 } catch (error) {
                     console.error("Error verificando:", error);
@@ -591,20 +577,15 @@
             } else {
                 // NO LOGUEADO
                 console.log("Esperando login...");
-                // Limpiamos contenido
                 if(scriptsContainer) scriptsContainer.innerHTML = ''; 
                 if(querysContainer) querysContainer.innerHTML = '';
                 
-                // --- AQUÍ ESTÁ LA CORRECCIÓN VISUAL ---
-                // Forzamos que el mensaje de carga (candado) sea visible
-                loadingIndicator.style.display = 'block'; 
-                
+                loadingIndicator.style.display = 'block';
                 loadingIndicator.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md max-w-md mx-auto mt-10">
-                        
-
-[Image of locked padlock icon]
-
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
                         <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200 mb-2">Contenido Protegido</h3>
                         <p class="text-gray-500 dark:text-gray-400 text-center mb-6">Debes iniciar sesión para ver la biblioteca.</p>
                     </div>
@@ -621,367 +602,68 @@
                 if(document.getElementById('btn-register-popup')) document.getElementById('btn-register-popup').addEventListener('click', openRegModal);
             }
         });
-        
-        // --- FUNCIONES DE RENDERIZADO ---
-       const renderScripts = (scriptsToRender) => {
-            if(!scriptsContainer) return;
-            scriptsContainer.innerHTML = '';
-            if (scriptsToRender.length === 0) {
-                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
-                return;
-            }
-            const activeCategory = scriptFilters.querySelector('.active').dataset.category;
-            const isPopularView = activeCategory === 'popular';
-            
-            scriptsToRender.forEach((script, index) => {
-                const isFavorite = favorites.includes(script.id);
-                const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col card-enter';
-                card.style.animationDelay = `${index * 50}ms`;
-                
-                // --- CAMBIO 1: La flama SOLO si es vista popular ---
-                let popularBadgeHtml = '';
-                if (isPopularView) {
-                    const count = script.copyCount || 0;
-                    popularBadgeHtml = `<div class="absolute top-3 right-20 flex items-center gap-1 text-xs bg-red-100 text-red-800 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full font-semibold z-10">🔥 <span>${count}</span></div>`;
-                }
 
-                // --- CAMBIO 2: El botón favorito SOLO si NO es vista popular ---
-                let favoriteBtnHtml = '';
-                if (!isPopularView) {
-                    favoriteBtnHtml = `
-                    <button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${isFavorite ? 'text-yellow-400' : 'text-gray-400/60'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg>
-                    </button>`;
-                }
-                
-                let variablesHtml = '';
-                if (script.variables && script.variables.length > 0) {
-                    const variableInputs = script.variables.map(v => `
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-mono text-gray-600 dark:text-gray-300 w-1/3 truncate">${v}:</label>
-                            <input type="text" data-variable-name="${v}" class="variable-input w-2/3 p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
-                        </div>`).join('');
-                    variablesHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Variables:</h4><div class="space-y-2">${variableInputs}</div></div>`;
-                }
+        // --- CONFIGURACIÓN DE LISTENERS (DB) ---
+        const setupFirestoreListeners = () => {
+            if (!auth.currentUser) return;
 
-                let adminOptionsHtml = `<div class="admin-only-flex absolute top-2 right-10 z-10">
-                        <button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
-                        </button>
-                        <div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden z-20">
-                            <a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100">Modificar</a>
-                            <a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Eliminar</a>
-                        </div>
-                    </div>`;
-
-                card.innerHTML = `${popularBadgeHtml} ${adminOptionsHtml}
-                    <div class="p-6 flex-grow">
-                        <div class="flex justify-between items-start">
-                            <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${script.title}</h2>
-                            ${favoriteBtnHtml}
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${script.description}</p>
-                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm max-h-48 overflow-y-auto">
-                            <pre class="script-content font-sans">${script.scriptText}</pre>
-                        </div>
-                        ${variablesHtml}
-                    </div>
-                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
-                        <button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-500">
-                            <span>Copiar Script</span>
-                        </button>
-                    </div>`;
-                card.dataset.id = script.id;
-                card.dataset.type = 'scripts';
-                scriptsContainer.appendChild(card);
-                
-                if (copiedScripts.has(script.id)) {
-                     const btn = card.querySelector('.copy-btn');
-                     if(btn) { btn.classList.add('copied'); btn.innerHTML = '<span>¡Copiado!</span>'; }
-                }
-            });
-        };
-        
-        const renderQuerys = (querysToRender) => {
-            if(!querysContainer) return;
-            querysContainer.innerHTML = '';
-            if (querysToRender.length === 0) {
-                querysContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
-                return;
-            }
-            const activeCategory = queryFilters.querySelector('.active').dataset.category;
-            const isPopularView = activeCategory === 'popular';
-            const serverNames = { 'aforeglobal': 'AforeGlobal', 'safre': 'Safre', 'notificaciones': 'Notificaciones', 'admonafore': 'AdmonAfore', 'serviciosafore': 'ServiciosAfore', 'extra': 'Extra' };
-            
-            querysToRender.forEach((query, index) => {
-                const isFavorite = queryFavorites.includes(query.id);
-                const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col card-enter';
-                card.style.animationDelay = `${index * 50}ms`;
-
-                // --- CAMBIO 1: La flama SOLO si es vista popular ---
-                let popularBadgeHtml = '';
-                if (isPopularView) {
-                    const count = query.copyCount || 0;
-                    popularBadgeHtml = `<div class="absolute top-3 right-20 flex items-center gap-1 text-xs bg-red-100 text-red-800 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full font-semibold z-10">🔥 <span>${count}</span></div>`;
-                }
-
-                // --- CAMBIO 2: El botón favorito SOLO si NO es vista popular ---
-                let favoriteBtnHtml = '';
-                if (!isPopularView) {
-                    favoriteBtnHtml = `
-                    <button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${isFavorite ? 'text-yellow-400' : 'text-gray-400/60'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg>
-                    </button>`;
-                }
-                
-                let serverBadgeHtml = '';
-                const serverName = serverNames[query.category];
-                if (serverName) {
-                    serverBadgeHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Servidor:</h4><span class="font-mono font-bold text-gray-800 dark:text-gray-200 text-sm">${serverName}</span></div>`;
-                }
-
-                let adminOptionsHtml = `<div class="admin-only-flex absolute top-2 right-10 z-10">
-                        <button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
-                        </button>
-                        <div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden z-20">
-                            <a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100">Modificar</a>
-                            <a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Eliminar</a>
-                        </div>
-                    </div>`;
-
-                card.innerHTML = `${popularBadgeHtml} ${adminOptionsHtml}
-                    <div class="p-6 flex-grow">
-                        <div class="flex justify-between items-start">
-                            <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${query.title}</h2>
-                            ${favoriteBtnHtml}
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${query.description}</p>
-                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm max-h-32 overflow-y-auto">
-                            <pre class="script-content font-mono">${query.scriptText}</pre>
-                        </div>
-                        ${serverBadgeHtml}
-                    </div>
-                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
-                        <button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-500">
-                            <span>Copiar Query</span>
-                        </button>
-                    </div>`;
-                card.dataset.id = query.id;
-                card.dataset.type = 'query';
-                querysContainer.appendChild(card);
-                
-                if (copiedQuerys.has(query.id)) {
-                     const btn = card.querySelector('.copy-btn');
-                     if(btn) { btn.classList.add('copied'); btn.innerHTML = '<span>¡Copiado!</span>'; }
-                }
-            });
-        };
-
-        // --- FUNCIÓN FALTANTE: RENDERIZADO DE SOLICITUDES ---
-    const renderCombinedRequests = () => {
-        if(!scriptsContainer) return;
-        scriptsContainer.innerHTML = '';
-        
-        if (pendingUsers.length === 0 && pendingRequests.length === 0) {
-            scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
-            return;
-        }
-
-        // 1. Renderizar USUARIOS Pendientes
-        pendingUsers.forEach(user => {
-            const card = document.createElement('div');
-            card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
-            card.innerHTML = `
-                <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
-                <div class="p-6">
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
-                    <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
-                    <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Fecha: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
-                </div>
-                <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
-                    <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Rechazar</button>
-                    <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Aprobar</button>
-                </div>`;
-            scriptsContainer.appendChild(card);
-        });
-
-        // 2. Renderizar Solicitudes de SCRIPTS
-        pendingRequests.forEach(request => {
-            const req = request.data;
-            const card = document.createElement('div');
-            card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
-            let color = req.action === 'add' ? 'bg-green-500' : (req.action === 'delete' ? 'bg-red-500' : 'bg-yellow-500');
-            let text = req.action === 'add' ? 'NUEVO' : (req.action === 'delete' ? 'ELIMINAR' : 'EDITAR');
-            
-            card.innerHTML = `
-                <div class="absolute top-2 right-2 px-2 py-1 ${color} text-white text-xs font-bold rounded-full">${text}</div>
-                <div class="p-6">
-                    <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
-                    <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
-                    <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm overflow-y-auto max-h-48"><pre class="font-sans">${req.scriptText}</pre></div>
-                </div>
-                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
-                    <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Rechazar</button>
-                    <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Aprobar</button>
-                </div>`;
-            scriptsContainer.appendChild(card);
-        });
-    };
-
-        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
-        const renderCombinedRequests = () => {
-            if(!scriptsContainer) return;
-            scriptsContainer.innerHTML = '';
-            
-            if (pendingUsers.length === 0 && pendingRequests.length === 0) {
-                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
-                return;
-            }
-
-            // 1. Renderizar USUARIOS Pendientes
-            pendingUsers.forEach(user => {
-                const card = document.createElement('div');
-                card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
-                
-                card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
-                    <div class="p-6">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
-                        <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Registrado: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
-                    </div>
-                    <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
-                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Rechazar</button>
-                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Aprobar Acceso</button>
-                    </div>
-                `;
-                scriptsContainer.appendChild(card);
-            });
-
-            // 2. Renderizar Solicitudes de SCRIPTS
-            pendingRequests.forEach(request => {
-                const req = request.data;
-                const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
-                
-                let actionText = '', actionColor = '';
-                if (req.action === 'add') { actionText = 'NUEVO SCRIPT'; actionColor = 'bg-green-500'; }
-                if (req.action === 'edit') { actionText = 'MODIFICACIÓN'; actionColor = 'bg-yellow-500'; }
-                if (req.action === 'delete') { actionText = 'ELIMINACIÓN'; actionColor = 'bg-red-500'; }
-
-                card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
-                    <div class="p-6">
-                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
-                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
-                            <pre class="script-content font-sans">${req.scriptText}</pre>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-2">Solicitado por: Admin</p>
-                    </div>
-                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
-                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
-                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
-                    </div>
-                `;
-                scriptsContainer.appendChild(card);
-            });
-        };
-        
-        // --- LISTENERS Y UTILIDADES ---
-        const setupAdminUI = (role) => {
-            if (role) document.body.classList.add('admin-mode');
-            else document.body.classList.remove('admin-mode');
-            
-            document.querySelectorAll('[data-category="requests"]').forEach(btn => {
-                if (role === 'superadmin') btn.style.display = 'flex';
-                else btn.style.display = 'none';
-            });
-        };
-
-      const setupFirestoreListeners = () => {
-            // Limpiar escuchas anteriores
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeQuerys) unsubscribeQuerys();
             if (unsubscribeRequests) unsubscribeRequests();
             
-            // Si no hay usuario, no intentamos cargar nada de Firebase
-            if (!auth.currentUser) return;
-
-            // Mostrar loading mientras carga
             loadingIndicator.style.display = 'block';
             loadingIndicator.innerText = "Cargando datos...";
 
-            // 1. Escuchar Scripts
+            // 1. Scripts
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
-                loadingIndicator.style.display = 'none'; // ¡Éxito! Ocultamos cargando
+                loadingIndicator.style.display = 'none';
             }, (error) => {
-                console.error("Error cargando scripts:", error);
-                // Si falla por permisos, mostramos mensaje visual
+                console.error("Error scripts:", error);
                 if (error.code === 'permission-denied') {
-                     loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ No tienes permisos.<br><span class="text-xs font-normal text-gray-500">Tu usuario no está activo.</span></div>`;
-                } else {
-                     loadingIndicator.style.display = 'none';
+                     loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ No tienes permisos.</div>`;
                 }
             });
 
-            // 2. Escuchar Querys
+            // 2. Querys
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
-            }, (error) => console.log("Querys: " + error.message));
+            }, (error) => console.log("Querys:", error.message));
 
-            // 3. Escuchar Solicitudes (SOLO Superadmin)
+            // 3. Solicitudes (Superadmin)
             if (currentUserRole === 'superadmin') {
                  unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
                      pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
-                         renderCombinedRequests();
-                     }
+                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
                  });
 
                  onSnapshot(userRolesCollection, (snapshot) => {
                      pendingUsers = snapshot.docs
                         .map(doc => ({ id: doc.id, ...doc.data() }))
                         .filter(user => user.status === 'pending');
-                     
-                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
-                         renderCombinedRequests();
-                     }
-                 }, (e) => console.log("Info usuarios: " + e.message));
+                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
+                 });
             }
         };
-        
-      const applyScriptFilters = () => {
+
+        // --- FILTROS ---
+        const applyScriptFilters = () => {
              if (!scriptsContainer) return;
              const searchTerm = scriptSearchInput.value.toLowerCase();
-             
-             // 1. Obtenemos la categoría activa
              const activeCategory = scriptFilters.querySelector('.active').dataset.category;
              
-             // --- CAMBIO NUEVO AQUÍ ---
-             // Si la categoría es "Solicitudes", usamos la función especial y nos salimos
              if (activeCategory === 'requests') {
                  renderCombinedRequests(); 
-                 return; // Importante: Stop aquí para no cargar scripts normales
+                 return;
              }
-             // -------------------------
 
              let filtered = allScripts;
-             
-             // Filtros normales
              if (activeCategory === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
              else if (activeCategory === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
              else if (activeCategory !== 'all') filtered = allScripts.filter(s => s.category === activeCategory);
              
-             // Buscador
              if (searchTerm) filtered = filtered.filter(s => s.title.toLowerCase().includes(searchTerm) || s.description.toLowerCase().includes(searchTerm));
              
              renderScripts(filtered);
@@ -1002,7 +684,7 @@
              renderQuerys(filtered);
         };
 
-        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
+        // --- RENDERIZADO DE SOLICITUDES ---
         const renderCombinedRequests = () => {
             if(!scriptsContainer) return;
             scriptsContainer.innerHTML = '';
@@ -1012,115 +694,139 @@
                 return;
             }
 
-            // 1. Renderizar USUARIOS Pendientes
             pendingUsers.forEach(user => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
-                
                 card.innerHTML = `
                     <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
                     <div class="p-6">
                         <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
                         <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
                         <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Registrado: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Fecha: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
                     </div>
                     <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
-                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Rechazar</button>
-                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Aprobar Acceso</button>
-                    </div>
-                `;
+                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Rechazar</button>
+                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Aprobar</button>
+                    </div>`;
                 scriptsContainer.appendChild(card);
             });
 
-            // 2. Renderizar Solicitudes de SCRIPTS
             pendingRequests.forEach(request => {
                 const req = request.data;
                 const card = document.createElement('div');
                 card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
+                let color = req.action === 'add' ? 'bg-green-500' : (req.action === 'delete' ? 'bg-red-500' : 'bg-yellow-500');
+                let text = req.action === 'add' ? 'NUEVO' : (req.action === 'delete' ? 'ELIMINAR' : 'EDITAR');
                 
-                let actionText = '', actionColor = '';
-                if (req.action === 'add') { actionText = 'NUEVO SCRIPT'; actionColor = 'bg-green-500'; }
-                if (req.action === 'edit') { actionText = 'MODIFICACIÓN'; actionColor = 'bg-yellow-500'; }
-                if (req.action === 'delete') { actionText = 'ELIMINACIÓN'; actionColor = 'bg-red-500'; }
-
                 card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
+                    <div class="absolute top-2 right-2 px-2 py-1 ${color} text-white text-xs font-bold rounded-full">${text}</div>
                     <div class="p-6">
                         <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
                         <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
-                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
-                            <pre class="script-content font-sans">${req.scriptText}</pre>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-2">Solicitado por: Admin</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm overflow-y-auto max-h-48"><pre class="font-sans">${req.scriptText}</pre></div>
                     </div>
                     <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
-                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
-                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
-                    </div>
-                `;
+                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Rechazar</button>
+                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Aprobar</button>
+                    </div>`;
                 scriptsContainer.appendChild(card);
             });
         };
 
-        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
-        const renderCombinedRequests = () => {
+        // --- RENDERIZADO DE CARDS (SCRIPTS/QUERYS) ---
+        const renderScripts = (scriptsToRender) => {
             if(!scriptsContainer) return;
             scriptsContainer.innerHTML = '';
-            
-            if (pendingUsers.length === 0 && pendingRequests.length === 0) {
-                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+            if (scriptsToRender.length === 0) {
+                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
                 return;
             }
-
-            // 1. PRIMERO: Renderizar USUARIOS Pendientes
-            pendingUsers.forEach(user => {
+            const activeCategory = scriptFilters.querySelector('.active').dataset.category;
+            const isPopularView = activeCategory === 'popular';
+            
+            scriptsToRender.forEach((script, index) => {
+                const isFavorite = favorites.includes(script.id);
                 const card = document.createElement('div');
-                card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col card-enter';
+                card.style.animationDelay = `${index * 50}ms`;
                 
-                card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">SOLICITUD ACCESO</div>
-                    <div class="p-6">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
-                        <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-2">Registrado: ${user.createdAt ? new Date(user.createdAt.toDate()).toLocaleDateString() : 'Reciente'}</p>
-                    </div>
-                    <div class="p-4 bg-blue-100 dark:bg-slate-700/50 border-t border-blue-200 dark:border-blue-900 mt-auto flex gap-2">
-                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Rechazar</button>
-                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Aprobar Acceso</button>
-                    </div>
-                `;
+                let popularBadgeHtml = '';
+                if (isPopularView) {
+                    const count = script.copyCount || 0;
+                    popularBadgeHtml = `<div class="absolute top-3 right-20 flex items-center gap-1 text-xs bg-red-100 text-red-800 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full font-semibold z-10">🔥 <span>${count}</span></div>`;
+                }
+
+                let favoriteBtnHtml = '';
+                if (!isPopularView) {
+                    favoriteBtnHtml = `<button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${isFavorite ? 'text-yellow-400' : 'text-gray-400/60'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>`;
+                }
+                
+                let variablesHtml = '';
+                if (script.variables && script.variables.length > 0) {
+                    const variableInputs = script.variables.map(v => `<div class="flex items-center gap-2"><label class="text-sm font-mono text-gray-600 dark:text-gray-300 w-1/3 truncate">${v}:</label><input type="text" data-variable-name="${v}" class="variable-input w-2/3 p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm"></div>`).join('');
+                    variablesHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Variables:</h4><div class="space-y-2">${variableInputs}</div></div>`;
+                }
+
+                let adminOptionsHtml = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg></button><div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden z-20"><a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100">Modificar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Eliminar</a></div></div>`;
+
+                card.innerHTML = `${popularBadgeHtml} ${adminOptionsHtml} <div class="p-6 flex-grow"><div class="flex justify-between items-start"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${script.title}</h2>${favoriteBtnHtml}</div><p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${script.description}</p><div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm max-h-48 overflow-y-auto"><pre class="script-content font-sans">${script.scriptText}</pre></div>${variablesHtml}</div><div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700"><button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-500"><span>Copiar Script</span></button></div>`;
+                card.dataset.id = script.id;
+                card.dataset.type = 'scripts';
                 scriptsContainer.appendChild(card);
+                
+                if (copiedScripts.has(script.id)) {
+                     const btn = card.querySelector('.copy-btn');
+                     if(btn) { btn.classList.add('copied'); btn.innerHTML = '<span>¡Copiado!</span>'; }
+                }
             });
+        };
 
-            // 2. DESPUÉS: Renderizar Solicitudes de SCRIPTS (Lo que ya tenías)
-            pendingRequests.forEach(request => {
-                const req = request.data;
+        const renderQuerys = (querysToRender) => {
+            if(!querysContainer) return;
+            querysContainer.innerHTML = '';
+            if (querysToRender.length === 0) {
+                querysContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No se encontraron resultados.</p>`;
+                return;
+            }
+            const activeCategory = queryFilters.querySelector('.active').dataset.category;
+            const isPopularView = activeCategory === 'popular';
+            const serverNames = { 'aforeglobal': 'AforeGlobal', 'safre': 'Safre', 'notificaciones': 'Notificaciones', 'admonafore': 'AdmonAfore', 'serviciosafore': 'ServiciosAfore', 'extra': 'Extra' };
+            
+            querysToRender.forEach((query, index) => {
+                const isFavorite = queryFavorites.includes(query.id);
                 const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col';
-                
-                let actionText = '', actionColor = '';
-                if (req.action === 'add') { actionText = 'NUEVO SCRIPT'; actionColor = 'bg-green-500'; }
-                if (req.action === 'edit') { actionText = 'MODIFICACIÓN'; actionColor = 'bg-yellow-500'; }
-                if (req.action === 'delete') { actionText = 'ELIMINACIÓN'; actionColor = 'bg-red-500'; }
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex flex-col card-enter';
+                card.style.animationDelay = `${index * 50}ms`;
 
-                card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 ${actionColor} text-white text-xs font-bold rounded-full">${actionText}</div>
-                    <div class="p-6">
-                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2">${req.title}</h2>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${req.description}</p>
-                        <div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto">
-                            <pre class="script-content font-sans">${req.scriptText}</pre>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-2">Solicitado por: Admin</p>
-                    </div>
-                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 mt-auto flex gap-2">
-                        <button data-id="${request.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-red-700">Rechazar</button>
-                        <button data-id="${request.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-700">Aprobar</button>
-                    </div>
-                `;
-                scriptsContainer.appendChild(card);
+                let popularBadgeHtml = '';
+                if (isPopularView) {
+                    const count = query.copyCount || 0;
+                    popularBadgeHtml = `<div class="absolute top-3 right-20 flex items-center gap-1 text-xs bg-red-100 text-red-800 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full font-semibold z-10">🔥 <span>${count}</span></div>`;
+                }
+                
+                let favoriteBtnHtml = '';
+                if (!isPopularView) {
+                    favoriteBtnHtml = `<button class="favorite-btn absolute top-2 right-2 p-1 text-gray-400 hover:text-yellow-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${isFavorite ? 'text-yellow-400' : 'text-gray-400/60'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>`;
+                }
+                
+                let serverBadgeHtml = '';
+                const serverName = serverNames[query.category];
+                if (serverName) {
+                    serverBadgeHtml = `<div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3"><h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Servidor:</h4><span class="font-mono font-bold text-gray-800 dark:text-gray-200 text-sm">${serverName}</span></div>`;
+                }
+
+                let adminOptionsHtml = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400 hover:text-blue-700 dark:hover:text-yellow-400"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg></button><div class="options-menu absolute right-0 mt-8 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 hidden z-20"><a href="#" class="edit-btn block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100">Modificar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Eliminar</a></div></div>`;
+
+                card.innerHTML = `${popularBadgeHtml} ${adminOptionsHtml} <div class="p-6 flex-grow"><div class="flex justify-between items-start"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 mb-2 pr-20">${query.title}</h2>${favoriteBtnHtml}</div><p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${query.description}</p><div class="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 text-sm max-h-32 overflow-y-auto"><pre class="script-content font-mono">${query.scriptText}</pre></div>${serverBadgeHtml}</div><div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700"><button class="copy-btn w-full bg-yellow-400 text-blue-800 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-500"><span>Copiar Query</span></button></div>`;
+                card.dataset.id = query.id;
+                card.dataset.type = 'query';
+                querysContainer.appendChild(card);
+                
+                if (copiedQuerys.has(query.id)) {
+                     const btn = card.querySelector('.copy-btn');
+                     if(btn) { btn.classList.add('copied'); btn.innerHTML = '<span>¡Copiado!</span>'; }
+                }
             });
         };
 
@@ -1152,30 +858,30 @@
 
         // --- EVENT LISTENERS GLOBALES ---
         document.getElementById('app-container').addEventListener('click', async (e) => {
-        // --- LÓGICA DE APROBACIÓN DE USUARIOS ---
+            // --- APROBACIÓN DE USUARIOS ---
             if (e.target.closest('.approve-user-btn')) {
                 const uid = e.target.closest('.approve-user-btn').dataset.userid;
                 if(confirm('¿Aprobar acceso a este usuario?')) {
-                    // Cambiamos estatus a 'active' y rol a 'viewer' (o 'admin' si prefieres)
                     await updateDoc(doc(userRolesCollection, uid), { status: 'active', role: 'viewer' });
                     alert("Usuario aprobado con éxito.");
                 }
+                return;
             }
-            
             if (e.target.closest('.reject-user-btn')) {
                 const uid = e.target.closest('.reject-user-btn').dataset.userid;
                 if(confirm('¿Rechazar y eliminar solicitud?')) {
-                    // Borramos el documento para que desaparezca
                     await deleteDoc(doc(userRolesCollection, uid));
                     alert("Solicitud rechazada y eliminada.");
                 }
+                return;
             }
+            
             const card = e.target.closest('[data-id]');
             if (!card) return;
             const id = card.dataset.id;
             const type = card.dataset.type;
             
-            // Copy Logic
+            // Copy
             if (e.target.closest('.copy-btn')) {
                  const content = card.querySelector('.script-content').textContent;
                  navigator.clipboard.writeText(content).then(() => {
@@ -1190,7 +896,7 @@
                  });
             }
             
-            // Favorite Logic
+            // Favorite
             if (e.target.closest('.favorite-btn')) {
                 const list = type === 'scripts' ? favorites : queryFavorites;
                 const key = type === 'scripts' ? 'favoriteScripts' : 'favoriteQuerys';
@@ -1202,61 +908,21 @@
                 render();
             }
             
-            // Admin Options logic
+            // Options
             if (e.target.closest('.options-btn')) {
                 e.target.closest('.options-btn').nextElementSibling.classList.toggle('hidden');
             }
-            // Edit/Delete Logic iría aquí
+            if (e.target.closest('.edit-btn')) {
+                e.preventDefault();
+                handleEditClick(id, type);
+            }
+            if (e.target.closest('.delete-btn')) {
+                e.preventDefault();
+                handleDeleteClick(id, type);
+            }
         });
 
-        // Filtros y Navegación
-        if(mainNav) mainNav.addEventListener('click', (e) => {
-            const btn = e.target.closest('.main-nav-btn');
-            if(btn) navigateTo(btn.dataset.view);
-        });
-        
-        const handleFilter = (e) => {
-             const btn = e.target.closest('.nav-button');
-             if(!btn) return;
-             btn.parentElement.querySelector('.active').classList.remove('active');
-             btn.classList.add('active');
-             if(currentView === 'scripts') applyScriptFilters();
-             else navigateTo('querys'); // Re-trigger nav logic for Learning section
-        };
-        scriptFilters.addEventListener('click', handleFilter);
-        queryFilters.addEventListener('click', handleFilter);
-        scriptSearchInput.addEventListener('input', applyScriptFilters);
-        querySearchInput.addEventListener('input', applyQueryFilters);
-
-        // Cerrar menús al hacer click fuera
-        document.body.addEventListener('click', (e) => {
-            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
-        });
-
-        // Modales Generales
-        const loginModal = document.getElementById('login-modal');
-        const openLoginModal = () => { loginModal.classList.remove('hidden'); setTimeout(()=>loginModal.classList.remove('opacity-0'),10); };
-        const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(()=>loginModal.classList.add('hidden'),300); };
-        document.getElementById('close-login-modal-btn').addEventListener('click', closeLoginModal);
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
-                closeLoginModal();
-            } catch(e) { alert("Error login"); }
-        });
-
-        // Tema
-        const toggleTheme = () => {
-             document.documentElement.classList.toggle('dark');
-             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-        };
-        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
-        // ==========================================
-        // --- LÓGICA DE ADMINISTRACIÓN (AGREGAR/EDITAR/ELIMINAR) ---
-        // ==========================================
-
+        // --- LÓGICA DE ADMINISTRACIÓN ---
         const itemModal = document.getElementById('add-item-modal');
         const itemForm = document.getElementById('script-form');
         const modalTitle = document.getElementById('modal-title');
@@ -1265,13 +931,11 @@
         const deleteModalText = document.getElementById('delete-modal-text');
         let itemToDelete = null;
 
-        // --- ABRIR MODAL (AGREGAR) ---
         document.getElementById('add-item-btn').addEventListener('click', () => {
             modalTitle.textContent = currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query';
             itemForm.reset();
             itemIdInput.value = '';
             
-            // Mostrar/Ocultar campos según la vista
             const scriptCat = document.getElementById('item-category-script');
             const queryCat = document.getElementById('item-category-query');
             const varsInput = document.getElementById('item-variables');
@@ -1285,12 +949,10 @@
                 queryCat.classList.remove('hidden'); queryCat.required = true;
                 varsInput.classList.add('hidden');
             }
-
             itemModal.classList.remove('hidden');
             setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         });
 
-        // --- CERRAR MODAL ---
         const closeItemModal = () => {
             itemModal.classList.add('opacity-0');
             setTimeout(() => itemModal.classList.add('hidden'), 300);
@@ -1298,12 +960,10 @@
         document.getElementById('cancel-btn').addEventListener('click', closeItemModal);
         document.getElementById('close-modal-btn').addEventListener('click', closeItemModal);
 
-        // --- GUARDAR (SUBMIT) ---
         itemForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = itemIdInput.value;
             const isEdit = !!id;
-            
             const collectionRef = currentView === 'scripts' ? scriptsCollection : querysCollection;
             const requestsRef = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
             
@@ -1318,25 +978,12 @@
             };
 
             try {
-                // LÓGICA: Si es Superadmin -> Guarda directo. Si es Admin -> Manda solicitud.
                 if (currentUserRole === 'superadmin') {
-                    if (isEdit) {
-                        await updateDoc(doc(collectionRef, id), data);
-                    } else {
-                        data.copyCount = 0; // Iniciar contador en 0
-                        await addDoc(collectionRef, data);
-                    }
+                    if (isEdit) await updateDoc(doc(collectionRef, id), data);
+                    else { data.copyCount = 0; await addDoc(collectionRef, data); }
                     alert(isEdit ? "Actualizado correctamente" : "Creado correctamente");
                 } else {
-                    // Es Admin normal -> Crear solicitud
-                    await addDoc(requestsRef, {
-                        ...data,
-                        action: isEdit ? 'edit' : 'add',
-                        originalId: id || null,
-                        status: 'pending',
-                        requestedBy: auth.currentUser.uid,
-                        timestamp: serverTimestamp()
-                    });
+                    await addDoc(requestsRef, { ...data, action: isEdit ? 'edit' : 'add', originalId: id || null, status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
                     alert("Solicitud enviada al Superadministrador.");
                 }
                 closeItemModal();
@@ -1346,8 +993,6 @@
             }
         });
 
-        // --- EDITAR (Lógica para llenar el formulario) ---
-        // Esta función se llama desde el listener global de clicks
         const handleEditClick = (id, type) => {
             const list = type === 'scripts' ? allScripts : allQuerys;
             const item = list.find(i => i.id === id);
@@ -1374,16 +1019,11 @@
             setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
 
-        // --- ELIMINAR ---
         const handleDeleteClick = (id, type) => {
             itemToDelete = { id, type };
             const list = type === 'scripts' ? allScripts : allQuerys;
             const item = list.find(i => i.id === id);
-            
-            deleteModalText.textContent = currentUserRole === 'superadmin' 
-                ? `¿Eliminar "${item.title}" permanentemente?` 
-                : `¿Solicitar eliminar "${item.title}"?`;
-            
+            deleteModalText.textContent = currentUserRole === 'superadmin' ? `¿Eliminar "${item.title}" permanentemente?` : `¿Solicitar eliminar "${item.title}"?`;
             deleteModal.classList.remove('hidden');
             setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
         };
@@ -1397,7 +1037,6 @@
             if (!itemToDelete) return;
             const { id, type } = itemToDelete;
             const collectionRef = type === 'scripts' ? scriptsCollection : querysCollection;
-            
             try {
                 if (currentUserRole === 'superadmin') {
                     await deleteDoc(doc(collectionRef, id));
@@ -1406,17 +1045,9 @@
                     const requestsRef = type === 'scripts' ? requestsCollection : queryRequestsCollection;
                     const list = type === 'scripts' ? allScripts : allQuerys;
                     const item = list.find(i => i.id === id);
-                    await addDoc(requestsRef, {
-                        originalId: id,
-                        title: item.title,
-                        action: 'delete',
-                        status: 'pending',
-                        requestedBy: auth.currentUser.uid,
-                        timestamp: serverTimestamp()
-                    });
+                    await addDoc(requestsRef, { originalId: id, title: item.title, action: 'delete', status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
                     alert("Solicitud de eliminación enviada.");
                 }
-                // Cerrar modal
                 deleteModal.classList.add('opacity-0');
                 setTimeout(() => deleteModal.classList.add('hidden'), 300);
             } catch (e) {
@@ -1424,33 +1055,10 @@
                 alert("Error al eliminar");
             }
         });
-
-        // --- CONECTAR BOTONES DE EDICIÓN/ELIMINAR AL LISTENER GLOBAL ---
-        // (Esto "inyecta" la lógica en el listener que ya tenías arriba)
-        const originalClickListener = document.getElementById('app-container').onclick; 
-        // Nota: Como usaste addEventListener arriba, vamos a agregar OTRO listener específico
-        // para editar/borrar que delegue a las funciones de arriba.
-        
-        document.getElementById('app-container').addEventListener('click', (e) => {
-            const card = e.target.closest('[data-id]');
-            if (!card) return;
-            const id = card.dataset.id;
-            const type = card.dataset.type;
-
-            if (e.target.closest('.edit-btn')) {
-                e.preventDefault();
-                handleEditClick(id, type);
-            }
-            if (e.target.closest('.delete-btn')) {
-                e.preventDefault();
-                handleDeleteClick(id, type);
-            }
-        });
-
     </script>
 </body>
-
 </html>
+
 
 
 
