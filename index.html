@@ -591,15 +591,22 @@
             } else {
                 // NO LOGUEADO
                 console.log("Esperando login...");
+                // Limpiamos contenido
                 if(scriptsContainer) scriptsContainer.innerHTML = ''; 
                 if(querysContainer) querysContainer.innerHTML = '';
-
-                loadingIndicator.style.display = 'block';
+                
+                // --- AQUÍ ESTÁ LA CORRECCIÓN VISUAL ---
+                // Forzamos que el mensaje de carga (candado) sea visible
+                loadingIndicator.style.display = 'block'; 
                 
                 loadingIndicator.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md max-w-md mx-auto mt-10">
+                        
+
+[Image of locked padlock icon]
+
                         <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200 mb-2">Contenido Protegido</h3>
-                        <p class="text-gray-500 dark:text-gray-400 text-center mb-6">Debes iniciar sesión.</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-center mb-6">Debes iniciar sesión para ver la biblioteca.</p>
                     </div>
                 `;
                 
@@ -846,17 +853,14 @@
         };
 
       const setupFirestoreListeners = () => {
-            // 1. Si no hay usuario, NO intentamos cargar nada (Evita el error de permisos)
-            if (!auth.currentUser) {
-                console.log("No hay usuario, saltando carga de datos.");
-                return;
-            }
-
             // Limpiar escuchas anteriores
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeQuerys) unsubscribeQuerys();
             if (unsubscribeRequests) unsubscribeRequests();
             
+            // Si no hay usuario, no intentamos cargar nada de Firebase
+            if (!auth.currentUser) return;
+
             // Mostrar loading mientras carga
             loadingIndicator.style.display = 'block';
             loadingIndicator.innerText = "Cargando datos...";
@@ -865,14 +869,14 @@
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
-                loadingIndicator.style.display = 'none'; // ¡Éxito!
+                loadingIndicator.style.display = 'none'; // ¡Éxito! Ocultamos cargando
             }, (error) => {
                 console.error("Error cargando scripts:", error);
-                // Si es error de permisos, es probable que el usuario no esté 'active'
+                // Si falla por permisos, mostramos mensaje visual
                 if (error.code === 'permission-denied') {
-                     loadingIndicator.innerHTML = `<p class="text-red-500 text-center p-4">⚠️ No tienes permisos para ver los datos.<br>Tu usuario podría no estar activo.</p>`;
+                     loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ No tienes permisos.<br><span class="text-xs font-normal text-gray-500">Tu usuario no está activo.</span></div>`;
                 } else {
-                     loadingIndicator.style.display = 'none'; // Ocultar si es otro error raro
+                     loadingIndicator.style.display = 'none';
                 }
             });
 
@@ -880,7 +884,7 @@
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
-            }, (error) => console.log("Querys no disponibles (normal si no estás en esa vista)"));
+            }, (error) => console.log("Querys: " + error.message));
 
             // 3. Escuchar Solicitudes (SOLO Superadmin)
             if (currentUserRole === 'superadmin') {
@@ -899,7 +903,7 @@
                      if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
                          renderCombinedRequests();
                      }
-                 }, (e) => console.log("No eres superadmin o error en usuarios"));
+                 }, (e) => console.log("Info usuarios: " + e.message));
             }
         };
 
@@ -1408,6 +1412,7 @@
 </body>
 
 </html>
+
 
 
 
