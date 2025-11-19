@@ -593,6 +593,8 @@
                 console.log("Esperando login...");
                 if(scriptsContainer) scriptsContainer.innerHTML = ''; 
                 if(querysContainer) querysContainer.innerHTML = '';
+
+                loadingIndicator.style.display = 'block';
                 
                 loadingIndicator.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md max-w-md mx-auto mt-10">
@@ -844,37 +846,62 @@
         };
 
       const setupFirestoreListeners = () => {
+            // 1. Si no hay usuario, NO intentamos cargar nada (Evita el error de permisos)
+            if (!auth.currentUser) {
+                console.log("No hay usuario, saltando carga de datos.");
+                return;
+            }
+
             // Limpiar escuchas anteriores
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeQuerys) unsubscribeQuerys();
             if (unsubscribeRequests) unsubscribeRequests();
             
-            // 1. Escuchar Scripts (Con detector de errores)
+            // Mostrar loading mientras carga
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.innerText = "Cargando datos...";
+
+            // 1. Escuchar Scripts
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
                 loadingIndicator.style.display = 'none'; // ¡Éxito!
             }, (error) => {
                 console.error("Error cargando scripts:", error);
-                // Si falla, mostramos el error en la pantalla en lugar de "Cargando..."
-                loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ Error de Permisos.<br><span class="text-xs font-normal text-gray-500">${error.message}</span></div>`;
+                // Si es error de permisos, es probable que el usuario no esté 'active'
+                if (error.code === 'permission-denied') {
+                     loadingIndicator.innerHTML = `<p class="text-red-500 text-center p-4">⚠️ No tienes permisos para ver los datos.<br>Tu usuario podría no estar activo.</p>`;
+                } else {
+                     loadingIndicator.style.display = 'none'; // Ocultar si es otro error raro
+                }
             });
 
             // 2. Escuchar Querys
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
-            }, (error) => console.error("Error querys:", error));
+            }, (error) => console.log("Querys no disponibles (normal si no estás en esa vista)"));
 
             // 3. Escuchar Solicitudes (SOLO Superadmin)
             if (currentUserRole === 'superadmin') {
-                 // A. Solicitudes de Contenido
                  unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
                      pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
                      if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
                          renderCombinedRequests();
                      }
                  });
+
+                 onSnapshot(userRolesCollection, (snapshot) => {
+                     pendingUsers = snapshot.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() }))
+                        .filter(user => user.status === 'pending');
+                     
+                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
+                         renderCombinedRequests();
+                     }
+                 }, (e) => console.log("No eres superadmin o error en usuarios"));
+            }
+        };
 
                  // B. Solicitudes de Usuarios Nuevos
                  onSnapshot(userRolesCollection, (snapshot) => {
@@ -1381,6 +1408,7 @@
 </body>
 
 </html>
+
 
 
 
