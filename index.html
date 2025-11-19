@@ -885,10 +885,205 @@
         };
         document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
+        // ==========================================
+        // --- LÓGICA DE ADMINISTRACIÓN (AGREGAR/EDITAR/ELIMINAR) ---
+        // ==========================================
+
+        const itemModal = document.getElementById('add-item-modal');
+        const itemForm = document.getElementById('script-form');
+        const modalTitle = document.getElementById('modal-title');
+        const itemIdInput = document.getElementById('item-id');
+        const deleteModal = document.getElementById('delete-confirm-modal');
+        const deleteModalText = document.getElementById('delete-modal-text');
+        let itemToDelete = null;
+
+        // --- ABRIR MODAL (AGREGAR) ---
+        document.getElementById('add-item-btn').addEventListener('click', () => {
+            modalTitle.textContent = currentView === 'scripts' ? 'Agregar Nuevo Script' : 'Agregar Nueva Query';
+            itemForm.reset();
+            itemIdInput.value = '';
+            
+            // Mostrar/Ocultar campos según la vista
+            const scriptCat = document.getElementById('item-category-script');
+            const queryCat = document.getElementById('item-category-query');
+            const varsInput = document.getElementById('item-variables');
+
+            if (currentView === 'scripts') {
+                scriptCat.classList.remove('hidden'); scriptCat.required = true;
+                queryCat.classList.add('hidden'); queryCat.required = false;
+                varsInput.classList.remove('hidden');
+            } else {
+                scriptCat.classList.add('hidden'); scriptCat.required = false;
+                queryCat.classList.remove('hidden'); queryCat.required = true;
+                varsInput.classList.add('hidden');
+            }
+
+            itemModal.classList.remove('hidden');
+            setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
+        });
+
+        // --- CERRAR MODAL ---
+        const closeItemModal = () => {
+            itemModal.classList.add('opacity-0');
+            setTimeout(() => itemModal.classList.add('hidden'), 300);
+        };
+        document.getElementById('cancel-btn').addEventListener('click', closeItemModal);
+        document.getElementById('close-modal-btn').addEventListener('click', closeItemModal);
+
+        // --- GUARDAR (SUBMIT) ---
+        itemForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = itemIdInput.value;
+            const isEdit = !!id;
+            
+            const collectionRef = currentView === 'scripts' ? scriptsCollection : querysCollection;
+            const requestsRef = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
+            
+            const data = {
+                title: document.getElementById('item-title').value,
+                description: document.getElementById('item-description').value,
+                scriptText: document.getElementById('item-text').value,
+                category: currentView === 'scripts' ? document.getElementById('item-category-script').value : document.getElementById('item-category-query').value,
+                variables: currentView === 'scripts' ? document.getElementById('item-variables').value.split(',').map(v=>v.trim()).filter(v=>v) : [],
+                updatedAt: serverTimestamp(),
+                lastUpdatedBy: auth.currentUser.uid
+            };
+
+            try {
+                // LÓGICA: Si es Superadmin -> Guarda directo. Si es Admin -> Manda solicitud.
+                if (currentUserRole === 'superadmin') {
+                    if (isEdit) {
+                        await updateDoc(doc(collectionRef, id), data);
+                    } else {
+                        data.copyCount = 0; // Iniciar contador en 0
+                        await addDoc(collectionRef, data);
+                    }
+                    alert(isEdit ? "Actualizado correctamente" : "Creado correctamente");
+                } else {
+                    // Es Admin normal -> Crear solicitud
+                    await addDoc(requestsRef, {
+                        ...data,
+                        action: isEdit ? 'edit' : 'add',
+                        originalId: id || null,
+                        status: 'pending',
+                        requestedBy: auth.currentUser.uid,
+                        timestamp: serverTimestamp()
+                    });
+                    alert("Solicitud enviada al Superadministrador.");
+                }
+                closeItemModal();
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert("Error: " + error.message);
+            }
+        });
+
+        // --- EDITAR (Lógica para llenar el formulario) ---
+        // Esta función se llama desde el listener global de clicks
+        const handleEditClick = (id, type) => {
+            const list = type === 'scripts' ? allScripts : allQuerys;
+            const item = list.find(i => i.id === id);
+            if (!item) return;
+
+            itemIdInput.value = id;
+            document.getElementById('item-title').value = item.title;
+            document.getElementById('item-description').value = item.description;
+            document.getElementById('item-text').value = item.scriptText;
+            
+            if (type === 'scripts') {
+                document.getElementById('item-category-script').value = item.category;
+                document.getElementById('item-variables').value = (item.variables || []).join(', ');
+                document.getElementById('item-category-script').classList.remove('hidden');
+                document.getElementById('item-category-query').classList.add('hidden');
+            } else {
+                document.getElementById('item-category-query').value = item.category;
+                document.getElementById('item-category-script').classList.add('hidden');
+                document.getElementById('item-category-query').classList.remove('hidden');
+            }
+            
+            modalTitle.textContent = 'Modificar Elemento';
+            itemModal.classList.remove('hidden');
+            setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
+        };
+
+        // --- ELIMINAR ---
+        const handleDeleteClick = (id, type) => {
+            itemToDelete = { id, type };
+            const list = type === 'scripts' ? allScripts : allQuerys;
+            const item = list.find(i => i.id === id);
+            
+            deleteModalText.textContent = currentUserRole === 'superadmin' 
+                ? `¿Eliminar "${item.title}" permanentemente?` 
+                : `¿Solicitar eliminar "${item.title}"?`;
+            
+            deleteModal.classList.remove('hidden');
+            setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
+        };
+
+        document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+             deleteModal.classList.add('opacity-0');
+             setTimeout(() => deleteModal.classList.add('hidden'), 300);
+        });
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            if (!itemToDelete) return;
+            const { id, type } = itemToDelete;
+            const collectionRef = type === 'scripts' ? scriptsCollection : querysCollection;
+            
+            try {
+                if (currentUserRole === 'superadmin') {
+                    await deleteDoc(doc(collectionRef, id));
+                    alert("Eliminado correctamente");
+                } else {
+                    const requestsRef = type === 'scripts' ? requestsCollection : queryRequestsCollection;
+                    const list = type === 'scripts' ? allScripts : allQuerys;
+                    const item = list.find(i => i.id === id);
+                    await addDoc(requestsRef, {
+                        originalId: id,
+                        title: item.title,
+                        action: 'delete',
+                        status: 'pending',
+                        requestedBy: auth.currentUser.uid,
+                        timestamp: serverTimestamp()
+                    });
+                    alert("Solicitud de eliminación enviada.");
+                }
+                // Cerrar modal
+                deleteModal.classList.add('opacity-0');
+                setTimeout(() => deleteModal.classList.add('hidden'), 300);
+            } catch (e) {
+                console.error(e);
+                alert("Error al eliminar");
+            }
+        });
+
+        // --- CONECTAR BOTONES DE EDICIÓN/ELIMINAR AL LISTENER GLOBAL ---
+        // (Esto "inyecta" la lógica en el listener que ya tenías arriba)
+        const originalClickListener = document.getElementById('app-container').onclick; 
+        // Nota: Como usaste addEventListener arriba, vamos a agregar OTRO listener específico
+        // para editar/borrar que delegue a las funciones de arriba.
+        
+        document.getElementById('app-container').addEventListener('click', (e) => {
+            const card = e.target.closest('[data-id]');
+            if (!card) return;
+            const id = card.dataset.id;
+            const type = card.dataset.type;
+
+            if (e.target.closest('.edit-btn')) {
+                e.preventDefault();
+                handleEditClick(id, type);
+            }
+            if (e.target.closest('.delete-btn')) {
+                e.preventDefault();
+                handleDeleteClick(id, type);
+            }
+        });
+
     </script>
 </body>
 
 </html>
+
 
 
 
