@@ -379,7 +379,7 @@
         // --- IMPORTS DE FIREBASE (PRODUCCIÓN) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         
         // --- CONFIGURACIÓN DE PRODUCCIÓN (TU CÓDIGO ORIGINAL) ---
         const firebaseConfig = {
@@ -899,8 +899,21 @@
             }
         };
 
+        // --- VARIABLE PARA EL PROVEEDOR DE GOOGLE ---
+        const googleProvider = new GoogleAuthProvider();
+
+        // --- FUNCIÓN PARA EL BOTÓN DE LOGIN ---
+        const iniciarSesionConGoogle = async () => {
+            try {
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                console.error("Error al iniciar sesión con Google:", error);
+                alert("Hubo un error al conectar con Google.");
+            }
+        };
+
         onAuthStateChanged(auth, async (user) => {
-            // Limpiar listeners anteriores para evitar duplicados
+            // 1. Limpiar listeners anteriores para evitar duplicados
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeRequests) unsubscribeRequests();
             if (unsubscribeQuerys) unsubscribeQuerys();
@@ -909,59 +922,76 @@
             currentUserRole = null;
             userId = user ? user.uid : null;
             
+            const authContainer = document.getElementById('auth-controls');
+
             if (user) {
-                // --- USUARIO ESTÁ AUTENTICADO (TOKEN, EMAIL, O ANÓNIMO) ---
-                userId = user.uid;
+                // ============================================================
+                // CANDADO DE SEGURIDAD: VALIDACIÓN DE DOMINIO
+                // ============================================================
+                const email = user.email || '';
+                // AQUI ESTÁ LA MAGIA: Validamos los dos dominios permitidos
+                const dominioValido = email.endsWith('@aforecoppel.com') || email.endsWith('@coppel.com');
+
+                // Si NO tiene el dominio correcto, lo sacamos inmediatamente
+                if (!dominioValido) {
+                    await signOut(auth);
+                    alert("ACCESO DENEGADO: Esta herramienta es exclusiva para colaboradores con correo @aforecoppel.com o @coppel.com");
+                    return; // Detenemos la ejecución aquí
+                }
+
+                // --- SI PASA EL CANDADO, CARGAMOS TODO ---
+                console.log("Acceso autorizado para:", email);
+
                 try {
-                    // Intentar obtener el rol del usuario
+                    // Obtener rol de usuario (Admin/Superadmin)
                     const roleDocRef = doc(userRolesCollection, user.uid);
                     const roleDocSnap = await getDoc(roleDocRef);
                     
                     if (roleDocSnap.exists()) {
                         currentUserRole = roleDocSnap.data().role;
-                        console.log("Rol de usuario:", currentUserRole);
-                    } else {
-                        console.log("Usuario logueado pero sin rol asignado (anónimo).");
-                    }
+                    } 
                 } catch (e) {
-                    console.error("Error al obtener el rol del usuario: ", e);
+                    console.error("Error al obtener rol:", e);
                 }
-    
-                // Configurar la UI basada en si es anónimo o un admin logueado
-                if (user.isAnonymous) {
-                     authControls.innerHTML = `<button id="login-btn" title="Acceso Admin" class="p-1 rounded-full text-blue-600 dark:text-yellow-400 hover:text-blue-800 dark:hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg></button>`;
-                     if(document.getElementById('login-btn')) document.getElementById('login-btn').addEventListener('click', openLoginModal);
-                     setupAdminUI(null);
-                } else {
-                    // Usuario real logueado
-                    authControls.innerHTML = `<button id="logout-btn" class="text-sm text-gray-500 hover:text-blue-700 dark:hover:text-yellow-400">Salir</button>`;
-                    if(document.getElementById('logout-btn')) document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                    setupAdminUI(currentUserRole);
-                }
-    
-                // ¡Importante! Cargar datos para TODOS (anónimos y admins)
+
+                // Mostrar botón de Salir y correo
+                authContainer.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500 hidden sm:block">${email}</span>
+                        <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700">Salir</button>
+                    </div>
+                `;
+                if(document.getElementById('logout-btn')) document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+                // Configurar UI Admin y Cargar Datos de Firebase
+                setupAdminUI(currentUserRole);
                 setupFirestoreListeners();
                 navigateTo(currentView); 
-    
+
             } else {
-                // --- USUARIO ES NULL (Pasa en la carga inicial) ---
-                console.log("Usuario es null. Intentando inicio anónimo...");
+                // --- USUARIO NO LOGUEADO (AQUI ELIMINAMOS EL LOGIN ANÓNIMO AUTOMÁTICO) ---
+                console.log("Usuario no identificado. Esperando login manual...");
                 
-                // Configurar UI para visitante
+                // Limpiar la pantalla para que no vean nada
+                if(scriptsContainer) scriptsContainer.innerHTML = ''; 
+                if(querysContainer) querysContainer.innerHTML = '';
+                loadingIndicator.innerHTML = '<p class="text-gray-500">Por favor, inicia sesión para ver el contenido.</p>';
                 setupAdminUI(null);
-                authControls.innerHTML = `<button id="login-btn" title="Acceso Admin" class="p-1 rounded-full text-blue-600 dark:text-yellow-400 hover:text-blue-800 dark:hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg></button>`;
-                if(document.getElementById('login-btn')) {
-                    document.getElementById('login-btn').addEventListener('click', openLoginModal);
-                }
-    
-                // Intentar iniciar sesión anónimamente
-                try {
-                    await signInAnonymously(auth);
-                    // onAuthStateChanged se volverá a disparar, esta vez con un usuario anónimo.
-                } catch (error) {
-                     console.error("Error en el inicio de sesión anónimo:", error);
-                     loadingIndicator.innerHTML = '<p class="text-red-500">Error de autenticación. No se pueden cargar los datos.</p>';
-                }
+
+                // Mostrar botón de Login con Google
+                authContainer.innerHTML = `
+                    <button id="google-login-btn" class="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 font-bold py-2 px-4 rounded shadow-sm transition-all text-sm">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4" alt="G">
+                        Acceder con Coppel
+                    </button>
+                    <button id="admin-login-btn" class="text-gray-400 hover:text-gray-600 ml-2" title="Acceso Admin Manual">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-lock" viewBox="0 0 16 16"><path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.056.255.098.386.123.134.026.275.042.415.042.14 0 .281-.016.415-.042.131-.025.266-.067.386-.123.241-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.018 7.018 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.016 7.016 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/><path d="M9.5 6.5a1.5 1.5 0 0 1-1 1.415l.385 1.965a.5.5 0 1 1-.966.19l-.385-1.965a1.5 1.5 0 1 1 1.966-1.606z"/></svg>
+                    </button>
+                `;
+                
+                // Activar los listeners de los botones
+                if(document.getElementById('google-login-btn')) document.getElementById('google-login-btn').addEventListener('click', iniciarSesionConGoogle);
+                if(document.getElementById('admin-login-btn')) document.getElementById('admin-login-btn').addEventListener('click', openLoginModal);
             }
         });
     
@@ -1529,6 +1559,7 @@
 </body>
 
 </html>
+
 
 
 
