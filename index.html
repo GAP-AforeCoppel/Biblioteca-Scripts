@@ -396,7 +396,7 @@
     </div>
     
     <script type="module">
-      // --- IMPORTS DE FIREBASE ---
+      // --- IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
@@ -424,9 +424,9 @@
         const queryRequestsCollection = collection(db, 'solicitudes_querys');
         const userRolesCollection = collection(db, 'user_roles');
 
-        // --- ESTADO GLOBAL ---
+        // --- ESTADO ---
         let currentView = 'scripts';
-        let isRegistering = false;
+        let isRegistering = false; // Bandera vital para evitar el loop
         let currentUserRole = null;
         let userId = null;
         let favorites = JSON.parse(localStorage.getItem('favoriteScripts')) || [];
@@ -434,18 +434,9 @@
         const copiedScripts = new Set();
         const copiedQuerys = new Set();
 
-        // --- DATOS ---
-        let allScripts = [];
-        let pendingRequests = [];
-        let pendingUsers = [];
-        let allQuerys = [];
-        let pendingQueryRequests = [];
-        
-        // --- LISTENERS ---
-        let unsubscribeScripts = null;
-        let unsubscribeRequests = null;
-        let unsubscribeQuerys = null;
-        let unsubscribeQueryRequests = null;
+        // --- VARIABLES DE DATOS ---
+        let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [], pendingQueryRequests = [];
+        let unsubscribeScripts = null, unsubscribeRequests = null, unsubscribeQuerys = null, unsubscribeQueryRequests = null;
 
         // --- DOM ELEMENTS ---
         const scriptsPage = document.getElementById('scripts-page-container');
@@ -462,17 +453,140 @@
         const learningSection = document.getElementById('sql-learning-section');
         const mainNav = document.getElementById('main-nav');
         const loadingIndicator = document.getElementById('loading-indicator');
-        
-        // --- DOM AUTH ---
         const authControls = document.getElementById('auth-controls');
-        const registerModal = document.getElementById('register-modal');
 
-        // --- FUNCIONES AUTH Y REGISTRO ---
-        const openRegModal = () => { registerModal.classList.remove('hidden'); setTimeout(() => registerModal.classList.remove('opacity-0'), 10); };
-        const closeRegModal = () => { registerModal.classList.add('opacity-0'); setTimeout(() => registerModal.classList.add('hidden'), 300); document.getElementById('register-form').reset(); };
+        // --- FUNCIONES AUXILIARES VISUALES ---
+        const showLoading = (msg) => {
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.innerHTML = `<p class="text-gray-500">${msg}</p>`;
+        };
+        const showError = (msg) => {
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-6 font-bold bg-white rounded-lg shadow border border-red-200">⚠️ ${msg}</div>`;
+        };
+        const hideLoading = () => { loadingIndicator.style.display = 'none'; };
+
+        // ======================================================
+        // --- 1. LÓGICA DE AUTENTICACIÓN (EL CORAZÓN) ---
+        // ======================================================
+
+        onAuthStateChanged(auth, async (user) => {
+            // Si estamos en medio de un registro, IGNORAMOS este cambio de estado para no interrumpir
+            if (isRegistering) return;
+
+            // Limpieza siempre
+            if (unsubscribeScripts) unsubscribeScripts();
+            if (unsubscribeQuerys) unsubscribeQuerys();
+            if (unsubscribeRequests) unsubscribeRequests();
+
+            currentUserRole = null;
+            userId = user ? user.uid : null;
+
+            if (user) {
+                // USUARIO LOGUEADO
+                console.log("Usuario detectado:", user.email);
+                showLoading("Verificando perfil de usuario...");
+
+                try {
+                    const userDocRef = doc(userRolesCollection, user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (userDocSnap.exists()) {
+                        // CASO NORMAL: El usuario tiene datos
+                        const userData = userDocSnap.data();
+                        
+                        if (userData.status !== 'active') {
+                            await signOut(auth);
+                            if (userData.status === 'pending') alert("⏳ Tu cuenta está en revisión por el administrador.");
+                            else alert("⛔ Acceso denegado. Cuenta desactivada.");
+                            return;
+                        }
+
+                        // Acceso Concedido
+                        currentUserRole = userData.role;
+                        renderUserInfo(userData.displayName, currentUserRole);
+                        setupAdminUI(currentUserRole);
+                        setupFirestoreListeners(); // Cargar datos
+                        navigateTo(currentView);
+
+                    } else {
+                        // CASO "LIMBO": Usuario existe en Auth pero NO en Base de Datos.
+                        // SOLUCIÓN: Lo creamos automáticamente como 'pending' para arreglar el error.
+                        console.log("Usuario sin perfil. Creando perfil de recuperación...");
+                        
+                        await setDoc(userDocRef, {
+                            email: user.email,
+                            displayName: user.email.split('@')[0], // Nombre temporal
+                            area: "Recuperado",
+                            role: 'viewer',
+                            status: 'pending', // Lo dejamos pendiente para que tú lo apruebes
+                            createdAt: serverTimestamp()
+                        });
+                        
+                        await signOut(auth);
+                        alert("⚠️ Tu perfil de datos no existía. Se ha creado una solicitud de recuperación. Espera a que el Superadministrador te active de nuevo.");
+                    }
+
+                } catch (error) {
+                    console.error("Error crítico:", error);
+                    showError("Error de conexión: " + error.message);
+                    // No cerramos sesión aquí para que veas el error en pantalla
+                }
+            } else {
+                // USUARIO NO LOGUEADO (PANTALLA DE INICIO)
+                console.log("No hay sesión activa.");
+                renderLoginScreen();
+            }
+        });
+
+        // --- PANTALLA DE LOGIN (CONTROLES VISUALES) ---
+        const renderLoginScreen = () => {
+            // Limpiar contenido
+            if(scriptsContainer) scriptsContainer.innerHTML = ''; 
+            if(querysContainer) querysContainer.innerHTML = '';
+            authControls.innerHTML = ''; 
+
+            // Mostrar Candado y Botones CENTRADOS
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md mx-auto mt-10 border border-gray-200 dark:border-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Acceso Restringido</h3>
+                    <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Sistema exclusivo para personal autorizado.</p>
+                    
+                    <div class="flex flex-col w-full gap-4">
+                        <button id="btn-login-center" style="background-color: #2563EB;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">
+                            Iniciar Sesión
+                        </button>
+                        <button id="btn-register-center" style="background-color: #16A34A;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">
+                            Solicitar Acceso
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            setupAdminUI(null);
+        };
+
+        const renderUserInfo = (name, role) => {
+             authControls.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <div class="text-xs font-bold text-blue-800 dark:text-yellow-400">${name}</div>
+                        <div class="text-[10px] text-gray-500 uppercase">${role}</div>
+                    </div>
+                    <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700 border border-red-200 px-3 py-1 rounded hover:bg-red-50">Salir</button>
+                </div>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+        };
+
+        // ======================================================
+        // --- 2. LÓGICA DE REGISTRO (SOLUCIÓN AL ERROR) ---
+        // ======================================================
         
-        if(document.getElementById('close-reg-modal-btn')) document.getElementById('close-reg-modal-btn').addEventListener('click', closeRegModal);
-
         const registerForm = document.getElementById('register-form');
         if(registerForm) {
             registerForm.addEventListener('submit', async (e) => {
@@ -482,12 +596,15 @@
                 const name = document.getElementById('reg-name').value;
                 const area = document.getElementById('reg-area').value;
 
+                // 1. ACTIVAR BANDERA (CRUCIAL)
                 isRegistering = true;
 
                 try {
+                    // Intentamos crear usuario
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
+                    // Creamos su documento
                     await setDoc(doc(db, "user_roles", user.uid), {
                         email: email,
                         displayName: name,
@@ -497,198 +614,81 @@
                         createdAt: serverTimestamp()
                     });
 
+                    // Éxito
                     closeRegModal();
-                    alert("✅ ¡Solicitud enviada correctamente!\n\nTu usuario ha sido creado. Por favor espera a que el Superadministrador active tu cuenta.");
+                    alert("✅ Solicitud enviada.\n\nTu usuario ha sido creado. Espera aprobación del administrador.");
                     await signOut(auth);
 
                 } catch (error) {
                     console.error("Error registro:", error);
+                    // Si el correo ya existe, es un error de usuario, no del sistema.
                     if(error.code === 'auth/email-already-in-use') {
-                        alert("Este correo ya está registrado. Intenta iniciar sesión.");
+                        alert("⚠️ Este correo ya está registrado.\n\nSi no puedes entrar, es probable que tu cuenta aún esté pendiente de aprobación.");
                     } else {
-                        alert("Hubo un error: " + error.message);
+                        alert("Error al registrar: " + error.message);
                     }
                 } finally {
+                    // Desactivar bandera pase lo que pase
                     isRegistering = false;
                 }
             });
         }
 
-        // --- LÓGICA PRINCIPAL DE AUTENTICACIÓN ---
-        onAuthStateChanged(auth, async (user) => {
-            if (isRegistering) return;
+        // ======================================================
+        // --- 3. CARGA DE DATOS (CONTROL DE ERRORES) ---
+        // ======================================================
 
-            // Limpiar listeners anteriores
-            if (unsubscribeScripts) unsubscribeScripts();
-            if (unsubscribeRequests) unsubscribeRequests();
-            if (unsubscribeQuerys) unsubscribeQuerys();
-            if (unsubscribeQueryRequests) unsubscribeQueryRequests();
-
-            currentUserRole = null;
-            userId = user ? user.uid : null;
-
-            if (user) {
-                console.log("Usuario detectado, verificando...");
-                try {
-                    const userDocRef = doc(userRolesCollection, user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-
-                    if (userDocSnap.exists()) {
-                        const userData = userDocSnap.data();
-                        
-                        if (userData.status !== 'active') {
-                            await signOut(auth);
-                            if (userData.status === 'pending') {
-                                alert("⏳ Tu cuenta está en revisión.");
-                            } else {
-                                alert("⛔ Acceso denegado.");
-                            }
-                            return;
-                        }
-
-                        currentUserRole = userData.role;
-                        
-                        authControls.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <div class="text-right hidden sm:block">
-                                    <div class="text-xs font-bold text-blue-800 dark:text-yellow-400">${userData.displayName || 'Usuario'}</div>
-                                    <div class="text-[10px] text-gray-500 uppercase">${currentUserRole}</div>
-                                </div>
-                                <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700 border border-red-200 px-3 py-1 rounded hover:bg-red-50">Salir</button>
-                            </div>
-                        `;
-                        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
-                        setupAdminUI(currentUserRole);
-                        setupFirestoreListeners();
-                        navigateTo(currentView);
-
-                    } else {
-                        console.log("Usuario sin perfil en BD.");
-                        await signOut(auth);
-                        alert("⚠️ Usuario no encontrado en la base de datos.");
-                    }
-                } catch (error) {
-                    console.error("Error verificando:", error);
-                    await signOut(auth);
-                    loadingIndicator.innerHTML = '<p class="text-red-500">Error de conexión. Recargando...</p>';
-                    window.location.reload();
-                }
-            } else {
-                // NO LOGUEADO
-                console.log("Esperando login...");
-                if(scriptsContainer) scriptsContainer.innerHTML = ''; 
-                if(querysContainer) querysContainer.innerHTML = '';
-                
-                if(authControls) authControls.innerHTML = ''; // Limpiar barra superior
-
-                loadingIndicator.style.display = 'block';
-                loadingIndicator.innerHTML = `
-                    <div class="flex flex-col items-center justify-center p-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md mx-auto mt-10 border border-gray-200 dark:border-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2 mt-2">Acceso Restringido</h3>
-                        <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Esta biblioteca es exclusiva para colaboradores autorizados.</p>
-                        
-                        <div class="flex flex-col w-full gap-4">
-                            <button id="btn-login-center" style="background-color: #2563EB;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">
-                                Iniciar Sesión
-                            </button>
-                            <button id="btn-register-center" style="background-color: #16A34A;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">
-                                Solicitar Acceso
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                setupAdminUI(null);
-                // Nota: Los listeners de estos botones se manejan en el Listener Global de abajo
-            }
-        });
-
-        // --- CONFIGURACIÓN DE LISTENERS (DB) ---
         const setupFirestoreListeners = () => {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser) return; // Doble seguridad
 
-            if (unsubscribeScripts) unsubscribeScripts();
-            if (unsubscribeQuerys) unsubscribeQuerys();
-            if (unsubscribeRequests) unsubscribeRequests();
-            
             loadingIndicator.style.display = 'block';
             loadingIndicator.innerText = "Cargando datos...";
 
-            // 1. Scripts
+            // Scripts
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
-                loadingIndicator.style.display = 'none';
+                hideLoading();
             }, (error) => {
                 console.error("Error scripts:", error);
                 if (error.code === 'permission-denied') {
-                     loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ No tienes permisos.</div>`;
+                     showError("Tu usuario no tiene permisos activos en la base de datos.");
                 }
             });
 
-            // 2. Querys
+            // Querys
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
-            }, (error) => console.log("Querys:", error.message));
+            }, (e) => console.log("Querys no disp."));
 
-            // 3. Solicitudes (Superadmin)
+            // Solicitudes (Solo Superadmin)
             if (currentUserRole === 'superadmin') {
                  unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
                      pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
+                     refreshRequestView();
                  });
 
                  onSnapshot(userRolesCollection, (snapshot) => {
                      pendingUsers = snapshot.docs
                         .map(doc => ({ id: doc.id, ...doc.data() }))
                         .filter(user => user.status === 'pending');
-                     if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
+                     refreshRequestView();
                  });
             }
         };
 
-        // --- FILTROS ---
-        const applyScriptFilters = () => {
-             if (!scriptsContainer) return;
-             const searchTerm = scriptSearchInput.value.toLowerCase();
-             const activeCategory = scriptFilters.querySelector('.active').dataset.category;
-             
-             if (activeCategory === 'requests') {
-                 renderCombinedRequests(); 
-                 return;
-             }
-
-             let filtered = allScripts;
-             if (activeCategory === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
-             else if (activeCategory === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (activeCategory !== 'all') filtered = allScripts.filter(s => s.category === activeCategory);
-             
-             if (searchTerm) filtered = filtered.filter(s => s.title.toLowerCase().includes(searchTerm) || s.description.toLowerCase().includes(searchTerm));
-             
-             renderScripts(filtered);
+        // Helper para refrescar vista de solicitudes
+        const refreshRequestView = () => {
+            if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') {
+                renderCombinedRequests();
+            }
         };
 
-        const applyQueryFilters = () => {
-             if (!querysContainer) return;
-             const searchTerm = querySearchInput.value.toLowerCase();
-             const activeCategory = queryFilters.querySelector('.active').dataset.category;
-             let filtered = allQuerys;
+        // ======================================================
+        // --- 4. RENDERIZADO Y UI ---
+        // ======================================================
 
-             if (activeCategory === 'favorites') filtered = allQuerys.filter(q => queryFavorites.includes(q.id));
-             else if (activeCategory === 'popular') filtered = [...allQuerys].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (activeCategory !== 'all' && activeCategory !== 'learn') filtered = allQuerys.filter(q => q.category === activeCategory);
-             
-             if (searchTerm) filtered = filtered.filter(q => q.title.toLowerCase().includes(searchTerm) || q.description.toLowerCase().includes(searchTerm));
-             
-             renderQuerys(filtered);
-        };
-
-        // --- RENDERIZADO DE SOLICITUDES (USUARIOS + SCRIPTS) ---
         const renderCombinedRequests = () => {
             if(!scriptsContainer) return;
             scriptsContainer.innerHTML = '';
@@ -698,7 +698,7 @@
                 return;
             }
 
-            // 1. Renderizar USUARIOS Pendientes
+            // Usuarios Pendientes
             pendingUsers.forEach(user => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
@@ -717,7 +717,7 @@
                 scriptsContainer.appendChild(card);
             });
 
-            // 2. Renderizar Solicitudes de SCRIPTS
+            // Solicitudes de Contenido
             pendingRequests.forEach(request => {
                 const req = request.data;
                 const card = document.createElement('div');
@@ -740,7 +740,6 @@
             });
         };
 
-        // --- RENDERIZADO DE CARDS (SCRIPTS/QUERYS) ---
         const renderScripts = (scriptsToRender) => {
             if(!scriptsContainer) return;
             scriptsContainer.innerHTML = '';
@@ -862,20 +861,34 @@
             }
         };
 
+        const handleFilter = (e) => {
+             const btn = e.target.closest('.nav-button');
+             if(!btn) return;
+             btn.parentElement.querySelector('.active').classList.remove('active');
+             btn.classList.add('active');
+             if(currentView === 'scripts') applyScriptFilters();
+             else navigateTo('querys'); // Re-trigger nav logic for Learning section
+        };
+        scriptFilters.addEventListener('click', handleFilter);
+        queryFilters.addEventListener('click', handleFilter);
+        scriptSearchInput.addEventListener('input', applyScriptFilters);
+        querySearchInput.addEventListener('input', applyQueryFilters);
+
         // --- EVENT LISTENERS GLOBALES ---
-        // 1. AQUÍ CONECTAMOS LOS BOTONES DE LOGIN/REGISTRO CENTRADOS
+        // IMPORTANTE: AQUÍ DETECTAMOS LOS CLICS EN LOS BOTONES CENTRADOS
         document.getElementById('app-container').addEventListener('click', async (e) => {
-            // Botones de login/registro inyectados dinámicamente
-            if (e.target.closest('#btn-login-center') || e.target.closest('#btn-login-popup')) {
+            
+            // 1. DETECCIÓN DE BOTONES DE LOGIN/REGISTRO (DINÁMICOS)
+            if (e.target.closest('#btn-login-center')) {
                 openLoginModal();
                 return;
             }
-            if (e.target.closest('#btn-register-center') || e.target.closest('#btn-register-popup')) {
+            if (e.target.closest('#btn-register-center')) {
                 openRegModal();
                 return;
             }
 
-            // Aprobación de Usuarios
+            // 2. Aprobación de Usuarios
             if (e.target.closest('.approve-user-btn')) {
                 const uid = e.target.closest('.approve-user-btn').dataset.userid;
                 if(confirm('¿Aprobar acceso a este usuario?')) {
@@ -884,7 +897,6 @@
                 }
                 return;
             }
-            // Rechazo de Usuarios
             if (e.target.closest('.reject-user-btn')) {
                 const uid = e.target.closest('.reject-user-btn').dataset.userid;
                 if(confirm('¿Rechazar y eliminar solicitud?')) {
@@ -893,8 +905,8 @@
                 }
                 return;
             }
-            
-            // Tarjetas y acciones
+
+            // 3. Tarjetas y acciones
             const card = e.target.closest('[data-id]');
             if (!card) return;
             const id = card.dataset.id;
@@ -939,6 +951,11 @@
                 e.preventDefault();
                 handleDeleteClick(id, type);
             }
+        });
+
+        // Cerrar menús al hacer click fuera
+        document.body.addEventListener('click', (e) => {
+            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
         });
 
         // Modales Generales
@@ -1139,6 +1156,7 @@
     </script>
 </body>
 </html>
+
 
 
 
