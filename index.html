@@ -396,12 +396,10 @@
     </div>
     
     <script type="module">
-     // --- IMPORTS ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         
-        // --- CONFIG ---
         const firebaseConfig = {
           apiKey: "AIzaSyAvq0CF94lVwGZAtXiFZKHwS5q4ZA489lM",
           authDomain: "scripts-une-gap.firebaseapp.com",
@@ -416,7 +414,6 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // --- VARIABLES ---
         const scriptsCollection = collection(db, 'scripts');
         const requestsCollection = collection(db, 'solicitudes');
         const querysCollection = collection(db, 'querys');
@@ -434,7 +431,6 @@
         let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [];
         let unsubscribeScripts, unsubscribeRequests, unsubscribeQuerys;
 
-        // --- DOM ---
         const scriptsContainer = document.getElementById('scripts-container');
         const querysContainer = document.getElementById('querys-container');
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -446,7 +442,6 @@
         const learningSection = document.getElementById('sql-learning-section');
         const mainNav = document.getElementById('main-nav');
         
-        // --- MODALES ---
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
         const itemModal = document.getElementById('add-item-modal');
@@ -463,13 +458,13 @@
             if(itemForm) itemForm.reset();
         };
 
-        // --- CLICK LISTENER MAESTRO (SOLUCIONA EL PROBLEMA DE BOTONES) ---
+        // --- CONTROLADOR MAESTRO DE CLICS (CORREGIDO) ---
         document.getElementById('app-container').addEventListener('click', async (e) => {
-            // 1. Login/Registro
+            // 1. BOTONES DE LOGIN/REGISTRO (ESTO ES LO QUE FALTABA)
             if (e.target.closest('#btn-login-center') || e.target.closest('#btn-login-popup')) return openLoginModal();
             if (e.target.closest('#btn-register-center') || e.target.closest('#btn-register-popup')) return openRegModal();
             
-            // 2. Aprobación Admin
+            // 2. Aprobación
             if (e.target.closest('.approve-user-btn')) {
                 const uid = e.target.closest('.approve-user-btn').dataset.userid;
                 if(confirm('¿Aprobar usuario?')) await updateDoc(doc(userRolesCollection, uid), { status: 'active', role: 'viewer' });
@@ -481,7 +476,6 @@
                 return;
             }
             
-            // 3. Tarjetas
             const card = e.target.closest('[data-id]');
             if (!card) return;
             const id = card.dataset.id;
@@ -508,7 +502,6 @@
             if (e.target.closest('.delete-btn')) { e.preventDefault(); handleDeleteClick(id, type); }
         });
 
-        // --- AUTH STATE ---
         onAuthStateChanged(auth, async (user) => {
             if (isRegistering) return;
             if (unsubscribeScripts) unsubscribeScripts();
@@ -518,23 +511,31 @@
             if (user) {
                 try {
                     const userDoc = await getDoc(doc(userRolesCollection, user.uid));
-                    if (userDoc.exists() && userDoc.data().status === 'active') {
-                        currentUserRole = userDoc.data().role;
-                        authControls.innerHTML = `<div class="flex items-center gap-3"><span class="text-xs text-blue-800 font-bold hidden sm:block">${userDoc.data().displayName}</span><button id="logout-btn" class="text-sm font-bold text-red-500 border border-red-200 px-2 py-1 rounded">Salir</button></div>`;
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        if (data.status !== 'active') {
+                            await signOut(auth);
+                            alert(data.status === 'pending' ? "⏳ Cuenta en revisión." : "⛔ Acceso denegado.");
+                            return;
+                        }
+                        currentUserRole = data.role;
+                        authControls.innerHTML = `<div class="flex items-center gap-3"><span class="text-xs text-blue-800 font-bold hidden sm:block">${data.displayName || 'Usuario'}</span><button id="logout-btn" class="text-sm font-bold text-red-500 border border-red-200 px-2 py-1 rounded">Salir</button></div>`;
                         document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
                         setupAdminUI(currentUserRole);
                         setupFirestoreListeners();
                         navigateTo(currentView);
                     } else {
+                        // Auto-recuperación
+                        await setDoc(doc(userRolesCollection, user.uid), { email: user.email, displayName: user.email.split('@')[0], role: 'viewer', status: 'pending', createdAt: serverTimestamp() });
                         await signOut(auth);
-                        alert("⚠️ Acceso denegado: Cuenta en revisión o desactivada.");
+                        alert("⚠️ Perfil restaurado. Tu cuenta está ahora en revisión.");
                     }
                 } catch (e) { 
                     console.error(e); 
-                    loadingIndicator.innerHTML = '<p class="text-red-500 text-center mt-10">Error de conexión.</p>';
+                    // Mostrar error en pantalla si falla la conexión inicial
+                    loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-6 border rounded">Error de conexión: ${e.message}<br><button onclick="location.reload()" class="mt-2 text-blue-500 underline">Recargar</button></div>`;
                 }
             } else {
-                // ESTADO: NO LOGUEADO
                 scriptsContainer.innerHTML = ''; 
                 querysContainer.innerHTML = '';
                 authControls.innerHTML = '';
@@ -552,16 +553,17 @@
             }
         });
 
-        // --- CARGA DE DATOS ---
         const setupFirestoreListeners = () => {
-            if (!auth.currentUser) return; // Evita cargar si no hay usuario
+            if (!auth.currentUser) return;
             loadingIndicator.style.display = 'block';
-            loadingIndicator.innerText = "Cargando...";
+            loadingIndicator.innerText = "Cargando datos...";
 
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
                 loadingIndicator.style.display = 'none';
+            }, (error) => {
+                if (error.code === 'permission-denied') loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold">⚠️ No tienes permisos.</div>`;
             });
             
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
@@ -581,7 +583,35 @@
             }
         };
 
-        // --- RENDERIZADO ---
+        const refreshRequestView = () => {
+            if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
+        };
+
+        const applyScriptFilters = () => {
+             if (!scriptsContainer) return;
+             const term = scriptSearchInput.value.toLowerCase();
+             const cat = scriptFilters.querySelector('.active').dataset.category;
+             if (cat === 'requests') { renderCombinedRequests(); return; }
+             let filtered = allScripts;
+             if (cat === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
+             else if (cat === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+             else if (cat !== 'all') filtered = allScripts.filter(s => s.category === cat);
+             if (term) filtered = filtered.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
+             renderScripts(filtered);
+        };
+
+        const applyQueryFilters = () => {
+             if (!querysContainer) return;
+             const term = querySearchInput.value.toLowerCase();
+             const cat = queryFilters.querySelector('.active').dataset.category;
+             let filtered = allQuerys;
+             if (cat === 'favorites') filtered = allQuerys.filter(q => queryFavorites.includes(q.id));
+             else if (cat === 'popular') filtered = [...allQuerys].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+             else if (cat !== 'all' && cat !== 'learn') filtered = allQuerys.filter(q => q.category === cat);
+             if (term) filtered = filtered.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
+             renderQuerys(filtered);
+        };
+
         const renderCombinedRequests = () => {
             scriptsContainer.innerHTML = '';
             if (pendingUsers.length === 0 && pendingRequests.length === 0) {
@@ -596,10 +626,6 @@
                 scriptsContainer.innerHTML += `<div class="bg-white p-4 mb-4 rounded shadow relative border"><div class="font-bold mb-2">${d.title} (${d.action})</div><p class="text-sm text-gray-600 mb-2">${d.description}</p><div class="flex gap-2"><button data-id="${r.id}" class="reject-btn bg-red-500 text-white px-3 py-1 rounded">Rechazar</button><button data-id="${r.id}" class="approve-btn bg-green-600 text-white px-3 py-1 rounded">Aprobar</button></div></div>`;
             });
         };
-        
-        const refreshRequestView = () => {
-            if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
-        };
 
         const renderScripts = (list) => {
             scriptsContainer.innerHTML = '';
@@ -608,13 +634,11 @@
                 const card = document.createElement('div');
                 card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter mb-6';
                 card.dataset.id = s.id; card.dataset.type = 'scripts';
-                
                 let flame = isPop ? `<div class="absolute top-3 right-20 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">🔥 ${s.copyCount||0}</div>` : '';
                 let star = !isPop ? `<button class="favorite-btn absolute top-2 right-2 text-gray-400 hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${favorites.includes(s.id)?'text-yellow-400':'text-gray-400'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>` : '';
+                let vars = s.variables ? `<div class="mt-4 border-t pt-3"><h4 class="text-sm font-bold">Variables:</h4>${s.variables.map(v=>`<div class="flex gap-2"><label class="text-sm w-1/3 truncate">${v}:</label><input class="variable-input w-2/3 border rounded text-sm p-1" data-variable-name="${v}"></div>`).join('')}</div>` : '';
                 let admin = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400">⚙️</button><div class="options-menu absolute right-0 mt-2 w-32 bg-white shadow-lg hidden z-20"><a href="#" class="edit-btn block px-4 py-2 text-sm hover:bg-gray-100">Editar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Borrar</a></div></div>`;
-                
-                card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${s.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${s.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-48 overflow-y-auto"><pre class="script-content whitespace-pre-wrap">${s.scriptText}</pre></div></div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg">Copiar Script</button></div>`;
-                
+                card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${s.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${s.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-48 overflow-y-auto"><pre class="script-content whitespace-pre-wrap">${s.scriptText}</pre></div>${vars}</div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg">Copiar Script</button></div>`;
                 if(copiedScripts.has(s.id)) card.querySelector('.copy-btn').innerText = '¡Copiado!';
                 scriptsContainer.appendChild(card);
             });
@@ -627,86 +651,21 @@
                 const card = document.createElement('div');
                 card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter mb-6';
                 card.dataset.id = q.id; card.dataset.type = 'query';
-                
                 let flame = isPop ? `<div class="absolute top-3 right-20 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">🔥 ${q.copyCount||0}</div>` : '';
                 let star = !isPop ? `<button class="favorite-btn absolute top-2 right-2 text-gray-400 hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${queryFavorites.includes(q.id)?'text-yellow-400':'text-gray-400'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>` : '';
                 let admin = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400">⚙️</button><div class="options-menu absolute right-0 mt-2 w-32 bg-white shadow-lg hidden z-20"><a href="#" class="edit-btn block px-4 py-2 text-sm hover:bg-gray-100">Editar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Borrar</a></div></div>`;
-                
                 card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${q.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${q.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-32 overflow-y-auto"><pre class="script-content whitespace-pre-wrap font-mono">${q.scriptText}</pre></div><div class="mt-2 text-xs font-bold text-gray-500">Servidor: ${q.category}</div></div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg">Copiar Query</button></div>`;
-                
                 if(copiedQuerys.has(q.id)) card.querySelector('.copy-btn').innerText = '¡Copiado!';
                 querysContainer.appendChild(card);
             });
         };
 
-        const applyScriptFilters = () => {
-             if (!scriptsContainer) return;
-             const term = scriptSearchInput.value.toLowerCase();
-             const cat = scriptFilters.querySelector('.active').dataset.category;
-             if (cat === 'requests') { renderCombinedRequests(); return; }
-             let filtered = allScripts.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
-             if (cat === 'favorites') filtered = filtered.filter(s => favorites.includes(s.id));
-             else if (cat === 'popular') filtered = filtered.sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (cat !== 'all') filtered = filtered.filter(s => s.category === cat);
-             renderScripts(filtered);
-        };
-
-        const applyQueryFilters = () => {
-             if (!querysContainer) return;
-             const term = querySearchInput.value.toLowerCase();
-             const cat = queryFilters.querySelector('.active').dataset.category;
-             let filtered = allQuerys.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
-             if (cat === 'favorites') filtered = filtered.filter(q => queryFavorites.includes(q.id));
-             else if (cat === 'popular') filtered = filtered.sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (cat !== 'all' && cat !== 'learn') filtered = filtered.filter(q => q.category === cat);
-             renderQuerys(filtered);
-        };
-
-        // --- NAVEGACIÓN ---
-        const navigateTo = (view) => {
-            currentView = view;
-            if (view === 'scripts') {
-                scriptsPage.classList.remove('hidden'); querysPage.classList.add('hidden');
-                mainNav.querySelector('[data-view="scripts"]').classList.add('active');
-                mainNav.querySelector('[data-view="querys"]').classList.remove('active');
-                applyScriptFilters();
-            } else {
-                scriptsPage.classList.add('hidden'); querysPage.classList.remove('hidden');
-                mainNav.querySelector('[data-view="scripts"]').classList.remove('active');
-                mainNav.querySelector('[data-view="querys"]').classList.add('active');
-                const cat = queryFilters.querySelector('.active').dataset.category;
-                if(cat === 'learn') { querysContainer.classList.add('hidden'); learningSection.classList.remove('hidden'); }
-                else { querysContainer.classList.remove('hidden'); learningSection.classList.add('hidden'); applyQueryFilters(); }
-            }
-        };
-
-        const handleFilter = (e) => {
-             const btn = e.target.closest('.nav-button');
-             if(!btn) return;
-             btn.parentElement.querySelector('.active').classList.remove('active');
-             btn.classList.add('active');
-             if(currentView === 'scripts') applyScriptFilters(); else navigateTo('querys');
-        };
-        scriptFilters.addEventListener('click', handleFilter);
-        queryFilters.addEventListener('click', handleFilter);
-        scriptSearchInput.addEventListener('input', applyScriptFilters);
-        querySearchInput.addEventListener('input', applyQueryFilters);
-        if(mainNav) mainNav.addEventListener('click', (e) => {
-            const btn = e.target.closest('.main-nav-btn');
-            if(btn) navigateTo(btn.dataset.view);
-        });
-        document.body.addEventListener('click', (e) => {
-            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
-        });
-
-        // --- MODALES ADMIN ---
         document.getElementById('close-login-modal-btn').addEventListener('click', closeAllModals);
         if(document.getElementById('close-reg-modal-btn')) document.getElementById('close-reg-modal-btn').addEventListener('click', closeAllModals);
         document.getElementById('cancel-btn').addEventListener('click', closeAllModals);
         document.getElementById('close-modal-btn').addEventListener('click', closeAllModals);
         document.getElementById('cancel-delete-btn').addEventListener('click', closeAllModals);
         
-        // Login Submit
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
@@ -715,7 +674,6 @@
             } catch(e) { alert("Error: Credenciales incorrectas."); }
         });
         
-        // Registro Submit
         if(registerForm) {
              registerForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -735,23 +693,22 @@
              });
         }
 
-        // Add Item Button
-        const modalTitle = document.getElementById('modal-title');
-        const itemIdInput = document.getElementById('item-id');
         document.getElementById('add-item-btn').addEventListener('click', () => {
             modalTitle.textContent = currentView === 'scripts' ? 'Nuevo' : 'Nueva Query';
             itemForm.reset(); itemIdInput.value = '';
             const isScript = currentView === 'scripts';
             document.getElementById('item-category-script').classList.toggle('hidden', !isScript);
+            document.getElementById('item-category-script').required = isScript;
             document.getElementById('item-category-query').classList.toggle('hidden', isScript);
+            document.getElementById('item-category-query').required = !isScript;
             document.getElementById('item-variables').classList.toggle('hidden', !isScript);
             itemModal.classList.remove('hidden'); setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         });
-        
-        // Save Item
+
         itemForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = itemIdInput.value;
+            const isEdit = !!id;
             const col = currentView === 'scripts' ? scriptsCollection : querysCollection;
             const reqCol = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
             const data = {
@@ -774,9 +731,9 @@
             } catch(e) { alert("Error: " + e.message); }
         });
 
-        // Edit / Delete Logic
         const handleEditClick = (id, type) => {
-             const item = (type==='scripts'?allScripts:allQuerys).find(i=>i.id===id);
+             const list = type === 'scripts' ? allScripts : allQuerys;
+             const item = list.find(i => i.id === id);
              if(!item) return;
              itemIdInput.value = id;
              document.getElementById('item-title').value = item.title;
@@ -786,9 +743,9 @@
              itemModal.classList.remove('hidden'); setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
         
-        let itemToDelete = null;
         const handleDeleteClick = (id, type) => {
              itemToDelete = { id, type };
+             deleteModalText.textContent = currentUserRole==='superadmin' ? `¿Eliminar?` : `¿Solicitar eliminar?`;
              deleteModal.classList.remove('hidden'); setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
         };
 
@@ -807,9 +764,33 @@
                  closeAllModals();
              } catch(e) { alert("Error"); }
         });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             document.documentElement.classList.toggle('dark');
+             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+        const handleFilter = (e) => {
+             const btn = e.target.closest('.nav-button');
+             if(!btn) return;
+             btn.parentElement.querySelector('.active').classList.remove('active');
+             btn.classList.add('active');
+             if(currentView === 'scripts') applyScriptFilters(); else navigateTo('querys');
+        };
+        scriptFilters.addEventListener('click', handleFilter);
+        queryFilters.addEventListener('click', handleFilter);
+        scriptSearchInput.addEventListener('input', applyScriptFilters);
+        querySearchInput.addEventListener('input', applyQueryFilters);
+        if(mainNav) mainNav.addEventListener('click', (e) => {
+            const btn = e.target.closest('.main-nav-btn');
+            if(btn) navigateTo(btn.dataset.view);
+        });
+        document.body.addEventListener('click', (e) => {
+            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+        });
     </script>
 </body>
 </html>
+
 
 
 
