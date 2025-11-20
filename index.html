@@ -396,13 +396,12 @@
     </div>
     
     <script type="module">
-      // ==========================================
-        // 1. CONFIGURACIÓN E IMPORTS
-        // ==========================================
+     // --- IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         
+        // --- CONFIG ---
         const firebaseConfig = {
           apiKey: "AIzaSyAvq0CF94lVwGZAtXiFZKHwS5q4ZA489lM",
           authDomain: "scripts-une-gap.firebaseapp.com",
@@ -417,27 +416,25 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Colecciones
+        // --- VARIABLES ---
         const scriptsCollection = collection(db, 'scripts');
         const requestsCollection = collection(db, 'solicitudes');
         const querysCollection = collection(db, 'querys');
         const queryRequestsCollection = collection(db, 'solicitudes_querys');
         const userRolesCollection = collection(db, 'user_roles');
 
-        // Variables de Estado
         let currentView = 'scripts';
         let isRegistering = false;
         let currentUserRole = null;
-        let userId = null;
         let favorites = JSON.parse(localStorage.getItem('favoriteScripts')) || [];
         let queryFavorites = JSON.parse(localStorage.getItem('favoriteQuerys')) || [];
         const copiedScripts = new Set();
         const copiedQuerys = new Set();
 
-        let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [], pendingQueryRequests = [];
-        let unsubscribeScripts = null, unsubscribeRequests = null, unsubscribeQuerys = null;
+        let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [];
+        let unsubscribeScripts, unsubscribeRequests, unsubscribeQuerys;
 
-        // Elementos DOM Principales
+        // --- DOM ---
         const scriptsContainer = document.getElementById('scripts-container');
         const querysContainer = document.getElementById('querys-container');
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -449,123 +446,55 @@
         const learningSection = document.getElementById('sql-learning-section');
         const mainNav = document.getElementById('main-nav');
         
-        // ==========================================
-        // 2. DEFINICIÓN DE MODALES Y FUNCIONES (IMPORTANTE: ESTO VA ANTES)
-        // ==========================================
+        // --- MODALES ---
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
         const itemModal = document.getElementById('add-item-modal');
         const deleteModal = document.getElementById('delete-confirm-modal');
+        const itemForm = document.getElementById('script-form');
 
-        // Funciones para abrir/cerrar
         const openLoginModal = () => { loginModal.classList.remove('hidden'); setTimeout(() => loginModal.classList.remove('opacity-0'), 10); };
-        const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(() => loginModal.classList.add('hidden'), 300); };
-        
         const openRegModal = () => { registerModal.classList.remove('hidden'); setTimeout(() => registerModal.classList.remove('opacity-0'), 10); };
-        const closeRegModal = () => { registerModal.classList.add('opacity-0'); setTimeout(() => registerModal.classList.add('hidden'), 300); document.getElementById('register-form').reset(); };
-
-        // Listeners de cierre de modales
-        if(document.getElementById('close-login-modal-btn')) document.getElementById('close-login-modal-btn').addEventListener('click', closeLoginModal);
-        if(document.getElementById('close-reg-modal-btn')) document.getElementById('close-reg-modal-btn').addEventListener('click', closeRegModal);
-
-        // Submit Login
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
-                closeLoginModal();
-            } catch(e) { alert("Error: Credenciales incorrectas o usuario no activo."); }
-        });
-
-        // Submit Registro
-        const registerForm = document.getElementById('register-form');
-        if(registerForm) {
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                isRegistering = true; 
-                try {
-                    const email = document.getElementById('reg-email').value;
-                    const password = document.getElementById('reg-password').value;
-                    const name = document.getElementById('reg-name').value;
-                    const area = document.getElementById('reg-area').value;
-
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    await setDoc(doc(db, "user_roles", user.uid), {
-                        email: email, displayName: name, area: area,
-                        role: 'viewer', status: 'pending', createdAt: serverTimestamp()
-                    });
-                    
-                    closeRegModal();
-                    alert("✅ Solicitud enviada. Espera aprobación.");
-                    await signOut(auth);
-                } catch (error) {
-                    console.error(error);
-                    if(error.code === 'auth/email-already-in-use') alert("Correo ya registrado.");
-                    else alert("Error: " + error.message);
-                } finally { isRegistering = false; }
+        const closeAllModals = () => {
+            [loginModal, registerModal, itemModal, deleteModal].forEach(m => {
+                m.classList.add('opacity-0'); 
+                setTimeout(() => m.classList.add('hidden'), 300);
             });
-        }
+            if(itemForm) itemForm.reset();
+        };
 
-        // ==========================================
-        // 3. CONTROLADOR MAESTRO DE CLICS (LISTENER GLOBAL)
-        // ==========================================
-        // Al mover las funciones de modales ARRIBA, este listener ahora sí las encuentra.
+        // --- CLICK LISTENER MAESTRO (SOLUCIONA EL PROBLEMA DE BOTONES) ---
         document.getElementById('app-container').addEventListener('click', async (e) => {
+            // 1. Login/Registro
+            if (e.target.closest('#btn-login-center') || e.target.closest('#btn-login-popup')) return openLoginModal();
+            if (e.target.closest('#btn-register-center') || e.target.closest('#btn-register-popup')) return openRegModal();
             
-            // A. BOTONES DE LOGIN Y REGISTRO (CENTRALES Y SUPERIORES)
-            // Usamos estilos en línea para forzar visibilidad en caso de error CSS
-            if (e.target.closest('#btn-login-center') || e.target.closest('#btn-login-popup')) {
-                openLoginModal(); return;
-            }
-            if (e.target.closest('#btn-register-center') || e.target.closest('#btn-register-popup')) {
-                openRegModal(); return;
-            }
-
-            // B. BOTONES DE APROBACIÓN (SUPERADMIN)
+            // 2. Aprobación Admin
             if (e.target.closest('.approve-user-btn')) {
                 const uid = e.target.closest('.approve-user-btn').dataset.userid;
-                if(confirm('¿Aprobar acceso a este usuario?')) {
-                    await updateDoc(doc(userRolesCollection, uid), { status: 'active', role: 'viewer' });
-                    alert("Usuario aprobado.");
-                }
+                if(confirm('¿Aprobar usuario?')) await updateDoc(doc(userRolesCollection, uid), { status: 'active', role: 'viewer' });
                 return;
             }
             if (e.target.closest('.reject-user-btn')) {
                 const uid = e.target.closest('.reject-user-btn').dataset.userid;
-                if(confirm('¿Rechazar solicitud?')) {
-                    await deleteDoc(doc(userRolesCollection, uid));
-                    alert("Solicitud eliminada.");
-                }
+                if(confirm('¿Rechazar usuario?')) await deleteDoc(doc(userRolesCollection, uid));
                 return;
             }
-
-            // C. TARJETAS (COPIAR, FAVORITOS, EDITAR, BORRAR)
+            
+            // 3. Tarjetas
             const card = e.target.closest('[data-id]');
             if (!card) return;
             const id = card.dataset.id;
             const type = card.dataset.type;
 
-            // Copiar
             if (e.target.closest('.copy-btn')) {
                  const content = card.querySelector('.script-content') ? card.querySelector('.script-content').textContent : '';
-                 navigator.clipboard.writeText(content).then(() => {
-                     const collection = type === 'scripts' ? scriptsCollection : querysCollection;
-                     const set = type === 'scripts' ? copiedScripts : copiedQuerys;
-                     // Verificación de seguridad antes de escribir
-                     if (currentUserRole) {
-                         updateDoc(doc(collection, id), { copyCount: increment(1) }).catch(err => console.log("Solo lectura"));
-                     }
-                     set.add(id);
-                     type === 'scripts' ? applyScriptFilters() : applyQueryFilters();
-                     setTimeout(() => { 
-                         set.delete(id); 
-                         type === 'scripts' ? applyScriptFilters() : applyQueryFilters(); 
-                     }, 2000);
-                 });
+                 navigator.clipboard.writeText(content);
+                 const col = type === 'scripts' ? scriptsCollection : querysCollection;
+                 updateDoc(doc(col, id), { copyCount: increment(1) });
+                 (type === 'scripts' ? copiedScripts : copiedQuerys).add(id);
+                 type === 'scripts' ? applyScriptFilters() : applyQueryFilters();
             }
-            // Favoritos
             if (e.target.closest('.favorite-btn')) {
                 const list = type === 'scripts' ? favorites : queryFavorites;
                 const key = type === 'scripts' ? 'favoriteScripts' : 'favoriteQuerys';
@@ -574,195 +503,102 @@
                 localStorage.setItem(key, JSON.stringify(list));
                 type === 'scripts' ? applyScriptFilters() : applyQueryFilters();
             }
-            // Admin Menu
             if (e.target.closest('.options-btn')) e.target.closest('.options-btn').nextElementSibling.classList.toggle('hidden');
-            // Editar
             if (e.target.closest('.edit-btn')) { e.preventDefault(); handleEditClick(id, type); }
-            // Borrar
             if (e.target.closest('.delete-btn')) { e.preventDefault(); handleDeleteClick(id, type); }
         });
 
-        // ==========================================
-        // 4. LÓGICA DE AUTENTICACIÓN (OBSERVADOR)
-        // ==========================================
+        // --- AUTH STATE ---
         onAuthStateChanged(auth, async (user) => {
             if (isRegistering) return;
-
-            // Reset UI
             if (unsubscribeScripts) unsubscribeScripts();
             if (unsubscribeRequests) unsubscribeRequests();
             if (unsubscribeQuerys) unsubscribeQuerys();
 
-            currentUserRole = null;
-            userId = user ? user.uid : null;
-
             if (user) {
-                console.log("Usuario:", user.email);
                 try {
                     const userDoc = await getDoc(doc(userRolesCollection, user.uid));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        if (data.status !== 'active') {
-                            await signOut(auth);
-                            alert(data.status === 'pending' ? "⏳ Cuenta en revisión." : "⛔ Acceso denegado.");
-                            return;
-                        }
-                        currentUserRole = data.role;
-                        
-                        // Barra Superior
-                        authControls.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <div class="text-right hidden sm:block"><div class="text-xs font-bold text-blue-800 dark:text-yellow-400">${data.displayName}</div><div class="text-[10px] text-gray-500 uppercase">${currentUserRole}</div></div>
-                                <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700 border border-red-200 px-3 py-1 rounded hover:bg-red-50">Salir</button>
-                            </div>`;
+                    if (userDoc.exists() && userDoc.data().status === 'active') {
+                        currentUserRole = userDoc.data().role;
+                        authControls.innerHTML = `<div class="flex items-center gap-3"><span class="text-xs text-blue-800 font-bold hidden sm:block">${userDoc.data().displayName}</span><button id="logout-btn" class="text-sm font-bold text-red-500 border border-red-200 px-2 py-1 rounded">Salir</button></div>`;
                         document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                        
                         setupAdminUI(currentUserRole);
                         setupFirestoreListeners();
                         navigateTo(currentView);
                     } else {
-                        // Auto-recuperación de usuario fantasma
-                        console.log("Creando perfil faltante...");
-                        await setDoc(doc(userRolesCollection, user.uid), { email: user.email, displayName: user.email.split('@')[0], role: 'viewer', status: 'pending', createdAt: serverTimestamp() });
                         await signOut(auth);
-                        alert("⚠️ Perfil restaurado. Tu cuenta está ahora en revisión.");
+                        alert("⚠️ Acceso denegado: Cuenta en revisión o desactivada.");
                     }
-                } catch (e) {
-                    console.error(e);
-                    loadingIndicator.innerHTML = '<p class="text-red-500">Error de conexión.</p>';
+                } catch (e) { 
+                    console.error(e); 
+                    loadingIndicator.innerHTML = '<p class="text-red-500 text-center mt-10">Error de conexión.</p>';
                 }
             } else {
-                // --- USUARIO NO LOGUEADO ---
+                // ESTADO: NO LOGUEADO
                 scriptsContainer.innerHTML = ''; 
                 querysContainer.innerHTML = '';
-                authControls.innerHTML = ''; // Limpia barra superior
-                
+                authControls.innerHTML = '';
                 loadingIndicator.style.display = 'block';
                 loadingIndicator.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md mx-auto mt-10 border border-gray-200 dark:border-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
                         <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Acceso Restringido</h3>
-                        <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Biblioteca exclusiva para colaboradores.</p>
+                        <p class="text-gray-600 dark:text-gray-300 text-center mb-6">Biblioteca exclusiva para colaboradores.</p>
                         <div class="flex flex-col w-full gap-4">
-                            <button id="btn-login-center" style="background-color: #2563EB; color: white;" class="w-full py-3 px-6 font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">Iniciar Sesión</button>
-                            <button id="btn-register-center" style="background-color: #16A34A; color: white;" class="w-full py-3 px-6 font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">Solicitar Acceso</button>
+                            <button id="btn-login-center" style="background-color: #2563EB; color: white;" class="w-full py-3 px-6 font-bold rounded-lg shadow-lg hover:opacity-90">Iniciar Sesión</button>
+                            <button id="btn-register-center" style="background-color: #16A34A; color: white;" class="w-full py-3 px-6 font-bold rounded-lg shadow-lg hover:opacity-90">Solicitar Acceso</button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 setupAdminUI(null);
             }
         });
 
-        // ==========================================
-        // 5. CARGA DE DATOS
-        // ==========================================
+        // --- CARGA DE DATOS ---
         const setupFirestoreListeners = () => {
-            if (!auth.currentUser) return;
-            
+            if (!auth.currentUser) return; // Evita cargar si no hay usuario
             loadingIndicator.style.display = 'block';
-            loadingIndicator.innerText = "Cargando datos...";
+            loadingIndicator.innerText = "Cargando...";
 
             unsubscribeScripts = onSnapshot(scriptsCollection, (snapshot) => {
                 allScripts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'scripts') applyScriptFilters();
                 loadingIndicator.style.display = 'none';
-            }, (error) => {
-                console.error("Error scripts:", error);
-                if (error.code === 'permission-denied') loadingIndicator.innerHTML = `<div class="text-red-500 text-center p-10 font-bold bg-white rounded-lg shadow">⚠️ No tienes permisos.</div>`;
             });
-
+            
             unsubscribeQuerys = onSnapshot(querysCollection, (snapshot) => {
                 allQuerys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (currentView === 'querys') applyQueryFilters();
             });
 
             if (currentUserRole === 'superadmin') {
-                 unsubscribeRequests = onSnapshot(requestsCollection, (snapshot) => {
-                     pendingRequests = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-                     refreshRequestView();
-                 });
-                 onSnapshot(userRolesCollection, (snapshot) => {
-                     pendingUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(u => u.status === 'pending');
-                     refreshRequestView();
-                 });
+                unsubscribeRequests = onSnapshot(requestsCollection, (snap) => {
+                    pendingRequests = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+                    refreshRequestView();
+                });
+                onSnapshot(userRolesCollection, (snap) => {
+                    pendingUsers = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.status === 'pending');
+                    refreshRequestView();
+                });
             }
         };
 
-        const refreshRequestView = () => {
-            if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
-        };
-
-        // ==========================================
-        // 6. RENDERIZADO Y FILTROS
-        // ==========================================
-        const applyScriptFilters = () => {
-             if (!scriptsContainer) return;
-             const term = scriptSearchInput.value.toLowerCase();
-             const cat = scriptFilters.querySelector('.active').dataset.category;
-             
-             if (cat === 'requests') { renderCombinedRequests(); return; }
-
-             let filtered = allScripts;
-             if (cat === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
-             else if (cat === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (cat !== 'all') filtered = allScripts.filter(s => s.category === cat);
-             
-             if (term) filtered = filtered.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
-             renderScripts(filtered);
-        };
-
-        const applyQueryFilters = () => {
-             if (!querysContainer) return;
-             const term = querySearchInput.value.toLowerCase();
-             const cat = queryFilters.querySelector('.active').dataset.category;
-             let filtered = allQuerys;
-             if (cat === 'favorites') filtered = allQuerys.filter(q => queryFavorites.includes(q.id));
-             else if (cat === 'popular') filtered = [...allQuerys].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (cat !== 'all' && cat !== 'learn') filtered = allQuerys.filter(q => q.category === cat);
-             if (term) filtered = filtered.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
-             renderQuerys(filtered);
-        };
-
+        // --- RENDERIZADO ---
         const renderCombinedRequests = () => {
             scriptsContainer.innerHTML = '';
             if (pendingUsers.length === 0 && pendingRequests.length === 0) {
-                scriptsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 col-span-full text-center mt-4">No hay solicitudes pendientes.</p>`;
+                scriptsContainer.innerHTML = `<p class="text-gray-500 text-center mt-4">No hay solicitudes.</p>`;
                 return;
             }
-            // Usuarios
-            pendingUsers.forEach(user => {
-                const card = document.createElement('div');
-                card.className = 'relative bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-lg overflow-hidden flex flex-col mb-4';
-                card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">USUARIO NUEVO</div>
-                    <div class="p-6">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">${user.displayName || 'Sin Nombre'}</h2>
-                        <p class="text-blue-600 dark:text-blue-400 font-mono text-sm mb-2">${user.email}</p>
-                        <p class="text-gray-600 dark:text-gray-300 text-sm"><strong>Área:</strong> ${user.area || 'N/A'}</p>
-                    </div>
-                    <div class="p-4 bg-blue-100 dark:bg-slate-700/50 flex gap-2">
-                        <button data-userid="${user.id}" class="reject-user-btn w-1/2 bg-red-500 text-white font-bold py-2 rounded-lg">Rechazar</button>
-                        <button data-userid="${user.id}" class="approve-user-btn w-1/2 bg-green-600 text-white font-bold py-2 rounded-lg">Aprobar</button>
-                    </div>`;
-                scriptsContainer.appendChild(card);
+            pendingUsers.forEach(u => {
+                scriptsContainer.innerHTML += `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 rounded shadow relative"><div class="font-bold text-blue-800 mb-2">USUARIO NUEVO</div><p><strong>${u.displayName}</strong> (${u.email})</p><p class="text-sm text-gray-600">${u.area}</p><div class="mt-3 flex gap-2"><button data-userid="${u.id}" class="reject-user-btn bg-red-500 text-white px-3 py-1 rounded">Rechazar</button><button data-userid="${u.id}" class="approve-user-btn bg-green-600 text-white px-3 py-1 rounded">Aprobar</button></div></div>`;
             });
-            // Scripts
-            pendingRequests.forEach(req => {
-                 const r = req.data;
-                 const card = document.createElement('div');
-                 card.className = 'bg-white rounded-xl shadow-lg overflow-hidden';
-                 let color = r.action === 'add' ? 'bg-green-500' : (r.action === 'delete' ? 'bg-red-500' : 'bg-yellow-500');
-                 card.innerHTML = `
-                    <div class="absolute top-2 right-2 px-2 py-1 ${color} text-white text-xs font-bold rounded-full">${r.action.toUpperCase()}</div>
-                    <div class="p-6"><h2 class="text-xl font-bold">${r.title}</h2><p class="text-sm">${r.description}</p></div>
-                    <div class="p-4 bg-gray-50 flex gap-2">
-                        <button data-id="${req.id}" class="reject-btn w-1/2 bg-red-600 text-white font-bold py-2 rounded-lg">Rechazar</button>
-                        <button data-id="${req.id}" class="approve-btn w-1/2 bg-green-600 text-white font-bold py-2 rounded-lg">Aprobar</button>
-                    </div>`;
-                 scriptsContainer.appendChild(card);
+            pendingRequests.forEach(r => {
+                const d = r.data;
+                scriptsContainer.innerHTML += `<div class="bg-white p-4 mb-4 rounded shadow relative border"><div class="font-bold mb-2">${d.title} (${d.action})</div><p class="text-sm text-gray-600 mb-2">${d.description}</p><div class="flex gap-2"><button data-id="${r.id}" class="reject-btn bg-red-500 text-white px-3 py-1 rounded">Rechazar</button><button data-id="${r.id}" class="approve-btn bg-green-600 text-white px-3 py-1 rounded">Aprobar</button></div></div>`;
             });
+        };
+        
+        const refreshRequestView = () => {
+            if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
         };
 
         const renderScripts = (list) => {
@@ -770,177 +606,211 @@
             const isPop = scriptFilters.querySelector('.active').dataset.category === 'popular';
             list.forEach(s => {
                 const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter';
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter mb-6';
+                card.dataset.id = s.id; card.dataset.type = 'scripts';
+                
                 let flame = isPop ? `<div class="absolute top-3 right-20 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">🔥 ${s.copyCount||0}</div>` : '';
                 let star = !isPop ? `<button class="favorite-btn absolute top-2 right-2 text-gray-400 hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${favorites.includes(s.id)?'text-yellow-400':'text-gray-400'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>` : '';
-                let vars = s.variables ? `<div class="mt-4 border-t pt-3"><h4 class="text-sm font-bold">Variables:</h4>${s.variables.map(v=>`<div class="flex gap-2"><label class="text-sm w-1/3 truncate">${v}:</label><input class="variable-input w-2/3 border rounded text-sm p-1" data-variable-name="${v}"></div>`).join('')}</div>` : '';
                 let admin = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400">⚙️</button><div class="options-menu absolute right-0 mt-2 w-32 bg-white shadow-lg hidden z-20"><a href="#" class="edit-btn block px-4 py-2 text-sm hover:bg-gray-100">Editar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Borrar</a></div></div>`;
-
-                card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${s.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${s.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-48 overflow-y-auto"><pre class="script-content">${s.scriptText}</pre></div>${vars}</div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg hover:bg-yellow-500">Copiar Script</button></div>`;
-                card.dataset.id = s.id; card.dataset.type = 'scripts';
+                
+                card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${s.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${s.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-48 overflow-y-auto"><pre class="script-content whitespace-pre-wrap">${s.scriptText}</pre></div></div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg">Copiar Script</button></div>`;
+                
+                if(copiedScripts.has(s.id)) card.querySelector('.copy-btn').innerText = '¡Copiado!';
                 scriptsContainer.appendChild(card);
-                if(copiedScripts.has(s.id)) card.querySelector('.copy-btn').innerHTML = '¡Copiado!';
             });
         };
 
         const renderQuerys = (list) => {
-             if(!querysContainer) return;
-             querysContainer.innerHTML = '';
-             const isPop = queryFilters.querySelector('.active').dataset.category === 'popular';
-             list.forEach(q => {
+            querysContainer.innerHTML = '';
+            const isPop = queryFilters.querySelector('.active').dataset.category === 'popular';
+            list.forEach(q => {
                 const card = document.createElement('div');
-                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter';
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter mb-6';
+                card.dataset.id = q.id; card.dataset.type = 'query';
+                
                 let flame = isPop ? `<div class="absolute top-3 right-20 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">🔥 ${q.copyCount||0}</div>` : '';
                 let star = !isPop ? `<button class="favorite-btn absolute top-2 right-2 text-gray-400 hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${queryFavorites.includes(q.id)?'text-yellow-400':'text-gray-400'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>` : '';
                 let admin = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400">⚙️</button><div class="options-menu absolute right-0 mt-2 w-32 bg-white shadow-lg hidden z-20"><a href="#" class="edit-btn block px-4 py-2 text-sm hover:bg-gray-100">Editar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Borrar</a></div></div>`;
                 
-                card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${q.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${q.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-32 overflow-y-auto"><pre class="script-content font-mono">${q.scriptText}</pre></div><div class="mt-4 border-t pt-2 text-sm font-bold text-gray-500">Servidor: ${q.category}</div></div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg hover:bg-yellow-500">Copiar Query</button></div>`;
-                card.dataset.id = q.id; card.dataset.type = 'query';
+                card.innerHTML = `${flame}${admin}<div class="p-6 flex-grow"><div class="flex justify-between"><h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-12">${q.title}</h2>${star}</div><p class="text-gray-600 text-sm mb-4">${q.description}</p><div class="bg-gray-100 p-4 rounded-lg text-sm max-h-32 overflow-y-auto"><pre class="script-content whitespace-pre-wrap font-mono">${q.scriptText}</pre></div><div class="mt-2 text-xs font-bold text-gray-500">Servidor: ${q.category}</div></div><div class="p-4 border-t"><button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg">Copiar Query</button></div>`;
+                
+                if(copiedQuerys.has(q.id)) card.querySelector('.copy-btn').innerText = '¡Copiado!';
                 querysContainer.appendChild(card);
-                if(copiedQuerys.has(q.id)) card.querySelector('.copy-btn').innerHTML = '¡Copiado!';
-             });
-        };
-
-        const setupAdminUI = (role) => {
-            if (role) document.body.classList.add('admin-mode');
-            else document.body.classList.remove('admin-mode');
-            document.querySelectorAll('[data-category="requests"]').forEach(btn => {
-                btn.style.display = (role === 'superadmin') ? 'flex' : 'none';
             });
         };
 
-        // ==========================================
-        // 7. LÓGICA ADMIN (MODALES)
-        // ==========================================
-        const itemModal = document.getElementById('add-item-modal');
-        const itemForm = document.getElementById('script-form');
+        const applyScriptFilters = () => {
+             if (!scriptsContainer) return;
+             const term = scriptSearchInput.value.toLowerCase();
+             const cat = scriptFilters.querySelector('.active').dataset.category;
+             if (cat === 'requests') { renderCombinedRequests(); return; }
+             let filtered = allScripts.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
+             if (cat === 'favorites') filtered = filtered.filter(s => favorites.includes(s.id));
+             else if (cat === 'popular') filtered = filtered.sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+             else if (cat !== 'all') filtered = filtered.filter(s => s.category === cat);
+             renderScripts(filtered);
+        };
+
+        const applyQueryFilters = () => {
+             if (!querysContainer) return;
+             const term = querySearchInput.value.toLowerCase();
+             const cat = queryFilters.querySelector('.active').dataset.category;
+             let filtered = allQuerys.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
+             if (cat === 'favorites') filtered = filtered.filter(q => queryFavorites.includes(q.id));
+             else if (cat === 'popular') filtered = filtered.sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+             else if (cat !== 'all' && cat !== 'learn') filtered = filtered.filter(q => q.category === cat);
+             renderQuerys(filtered);
+        };
+
+        // --- NAVEGACIÓN ---
+        const navigateTo = (view) => {
+            currentView = view;
+            if (view === 'scripts') {
+                scriptsPage.classList.remove('hidden'); querysPage.classList.add('hidden');
+                mainNav.querySelector('[data-view="scripts"]').classList.add('active');
+                mainNav.querySelector('[data-view="querys"]').classList.remove('active');
+                applyScriptFilters();
+            } else {
+                scriptsPage.classList.add('hidden'); querysPage.classList.remove('hidden');
+                mainNav.querySelector('[data-view="scripts"]').classList.remove('active');
+                mainNav.querySelector('[data-view="querys"]').classList.add('active');
+                const cat = queryFilters.querySelector('.active').dataset.category;
+                if(cat === 'learn') { querysContainer.classList.add('hidden'); learningSection.classList.remove('hidden'); }
+                else { querysContainer.classList.remove('hidden'); learningSection.classList.add('hidden'); applyQueryFilters(); }
+            }
+        };
+
+        const handleFilter = (e) => {
+             const btn = e.target.closest('.nav-button');
+             if(!btn) return;
+             btn.parentElement.querySelector('.active').classList.remove('active');
+             btn.classList.add('active');
+             if(currentView === 'scripts') applyScriptFilters(); else navigateTo('querys');
+        };
+        scriptFilters.addEventListener('click', handleFilter);
+        queryFilters.addEventListener('click', handleFilter);
+        scriptSearchInput.addEventListener('input', applyScriptFilters);
+        querySearchInput.addEventListener('input', applyQueryFilters);
+        if(mainNav) mainNav.addEventListener('click', (e) => {
+            const btn = e.target.closest('.main-nav-btn');
+            if(btn) navigateTo(btn.dataset.view);
+        });
+        document.body.addEventListener('click', (e) => {
+            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+        });
+
+        // --- MODALES ADMIN ---
+        document.getElementById('close-login-modal-btn').addEventListener('click', closeAllModals);
+        if(document.getElementById('close-reg-modal-btn')) document.getElementById('close-reg-modal-btn').addEventListener('click', closeAllModals);
+        document.getElementById('cancel-btn').addEventListener('click', closeAllModals);
+        document.getElementById('close-modal-btn').addEventListener('click', closeAllModals);
+        document.getElementById('cancel-delete-btn').addEventListener('click', closeAllModals);
+        
+        // Login Submit
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+                closeAllModals();
+            } catch(e) { alert("Error: Credenciales incorrectas."); }
+        });
+        
+        // Registro Submit
+        if(registerForm) {
+             registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                isRegistering = true;
+                try {
+                    const email = document.getElementById('reg-email').value;
+                    const password = document.getElementById('reg-password').value;
+                    const name = document.getElementById('reg-name').value;
+                    const area = document.getElementById('reg-area').value;
+                    const cred = await createUserWithEmailAndPassword(auth, email, password);
+                    await setDoc(doc(db, "user_roles", cred.user.uid), { email, displayName: name, area, role: 'viewer', status: 'pending', createdAt: serverTimestamp() });
+                    closeAllModals();
+                    alert("Solicitud enviada.");
+                    await signOut(auth);
+                } catch (e) { alert("Error: " + e.message); } 
+                finally { isRegistering = false; }
+             });
+        }
+
+        // Add Item Button
         const modalTitle = document.getElementById('modal-title');
         const itemIdInput = document.getElementById('item-id');
-        const deleteModalText = document.getElementById('delete-modal-text');
-        let itemToDelete = null;
-
         document.getElementById('add-item-btn').addEventListener('click', () => {
             modalTitle.textContent = currentView === 'scripts' ? 'Nuevo' : 'Nueva Query';
             itemForm.reset(); itemIdInput.value = '';
             const isScript = currentView === 'scripts';
             document.getElementById('item-category-script').classList.toggle('hidden', !isScript);
-            document.getElementById('item-category-script').required = isScript;
             document.getElementById('item-category-query').classList.toggle('hidden', isScript);
-            document.getElementById('item-category-query').required = !isScript;
             document.getElementById('item-variables').classList.toggle('hidden', !isScript);
             itemModal.classList.remove('hidden'); setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         });
-
-        const closeItemModal = () => { itemModal.classList.add('opacity-0'); setTimeout(() => itemModal.classList.add('hidden'), 300); };
-        document.getElementById('cancel-btn').addEventListener('click', closeItemModal);
-        document.getElementById('close-modal-btn').addEventListener('click', closeItemModal);
-
+        
+        // Save Item
         itemForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = itemIdInput.value;
-            const isEdit = !!id;
             const col = currentView === 'scripts' ? scriptsCollection : querysCollection;
             const reqCol = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
-
             const data = {
                 title: document.getElementById('item-title').value,
                 description: document.getElementById('item-description').value,
                 scriptText: document.getElementById('item-text').value,
                 category: currentView === 'scripts' ? document.getElementById('item-category-script').value : document.getElementById('item-category-query').value,
                 variables: currentView === 'scripts' ? document.getElementById('item-variables').value.split(',').map(v=>v.trim()).filter(v=>v) : [],
-                updatedAt: serverTimestamp(),
-                lastUpdatedBy: auth.currentUser.uid
+                updatedAt: serverTimestamp(), lastUpdatedBy: auth.currentUser.uid
             };
-
             try {
-                if (currentUserRole === 'superadmin') {
-                    if (isEdit) await updateDoc(doc(col, id), data);
-                    else { data.copyCount = 0; await addDoc(col, data); }
-                    alert("Guardado correctamente.");
+                if(currentUserRole==='superadmin') {
+                    if(id) await updateDoc(doc(col, id), data); else { data.copyCount=0; await addDoc(col, data); }
+                    alert("Guardado.");
                 } else {
-                    await addDoc(reqCol, { ...data, action: isEdit?'edit':'add', originalId: id||null, status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
+                    await addDoc(reqCol, { ...data, action: id?'edit':'add', originalId: id||null, status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
                     alert("Solicitud enviada.");
                 }
-                closeItemModal();
-            } catch (e) { console.error(e); alert("Error: " + e.message); }
+                closeAllModals();
+            } catch(e) { alert("Error: " + e.message); }
         });
 
+        // Edit / Delete Logic
         const handleEditClick = (id, type) => {
-             const list = type === 'scripts' ? allScripts : allQuerys;
-             const item = list.find(i => i.id === id);
+             const item = (type==='scripts'?allScripts:allQuerys).find(i=>i.id===id);
              if(!item) return;
              itemIdInput.value = id;
              document.getElementById('item-title').value = item.title;
              document.getElementById('item-description').value = item.description;
              document.getElementById('item-text').value = item.scriptText;
-             
-             const isScript = type === 'scripts';
-             document.getElementById('item-category-script').value = isScript ? item.category : '';
-             document.getElementById('item-category-query').value = !isScript ? item.category : '';
-             if(isScript) document.getElementById('item-variables').value = (item.variables||[]).join(', ');
-             
-             document.getElementById('item-category-script').classList.toggle('hidden', !isScript);
-             document.getElementById('item-category-query').classList.toggle('hidden', isScript);
-             document.getElementById('item-variables').classList.toggle('hidden', !isScript);
-
              modalTitle.textContent = 'Editar';
              itemModal.classList.remove('hidden'); setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
         
+        let itemToDelete = null;
         const handleDeleteClick = (id, type) => {
              itemToDelete = { id, type };
-             deleteModalText.textContent = currentUserRole==='superadmin' ? `¿Eliminar?` : `¿Solicitar eliminar?`;
              deleteModal.classList.remove('hidden'); setTimeout(() => deleteModal.classList.remove('opacity-0'), 10);
         };
 
-        document.getElementById('cancel-delete-btn').addEventListener('click', () => { deleteModal.classList.add('opacity-0'); setTimeout(()=>deleteModal.classList.add('hidden'),300); });
         document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
              if(!itemToDelete) return;
              const { id, type } = itemToDelete;
              const col = type==='scripts'?scriptsCollection:querysCollection;
              try {
-                 if(currentUserRole==='superadmin') {
-                     await deleteDoc(doc(col, id)); alert("Eliminado.");
-                 } else {
+                 if(currentUserRole==='superadmin') { await deleteDoc(doc(col, id)); alert("Eliminado."); }
+                 else { 
                      const reqCol = type==='scripts'?requestsCollection:queryRequestsCollection;
                      const item = (type==='scripts'?allScripts:allQuerys).find(i=>i.id===id);
                      await addDoc(reqCol, { originalId: id, title: item.title, action: 'delete', status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
-                     alert("Solicitud de eliminación enviada.");
+                     alert("Solicitud enviada.");
                  }
-                 deleteModal.classList.add('opacity-0'); setTimeout(()=>deleteModal.classList.add('hidden'),300);
-             } catch(e) { alert("Error al eliminar"); }
-        });
-
-        // --- HELPERS DE NAVEGACIÓN Y TEMA ---
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-             document.documentElement.classList.toggle('dark');
-             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-        });
-        
-        const handleFilter = (e) => {
-             const btn = e.target.closest('.nav-button');
-             if(!btn) return;
-             btn.parentElement.querySelector('.active').classList.remove('active');
-             btn.classList.add('active');
-             if(currentView === 'scripts') applyScriptFilters();
-             else navigateTo('querys');
-        };
-        scriptFilters.addEventListener('click', handleFilter);
-        queryFilters.addEventListener('click', handleFilter);
-        scriptSearchInput.addEventListener('input', applyScriptFilters);
-        querySearchInput.addEventListener('input', applyQueryFilters);
-        
-        if(mainNav) mainNav.addEventListener('click', (e) => {
-            const btn = e.target.closest('.main-nav-btn');
-            if(btn) navigateTo(btn.dataset.view);
-        });
-
-        document.body.addEventListener('click', (e) => {
-            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+                 closeAllModals();
+             } catch(e) { alert("Error"); }
         });
     </script>
 </body>
 </html>
+
 
 
 
