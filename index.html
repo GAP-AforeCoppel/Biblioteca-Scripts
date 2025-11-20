@@ -23,6 +23,8 @@
         .script-content { white-space: pre-wrap; word-wrap: break-word; }
         .nav-button.active { background-color: #1d4ed8; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .dark .nav-button.active { background-color: #fbbF24; color: #111827; }
+        
+        /* Transiciones de Modales */
         #add-item-modal, #delete-confirm-modal, #login-modal, #register-modal, #info-modal { transition: opacity 0.3s ease; }
         
         /* Reglas de visibilidad para Admin */
@@ -30,28 +32,61 @@
         body.admin-mode .admin-only-flex { display: flex !important; }
 
         /* Estilo para el botón de copiar confirmado */
-        .copy-btn.copied { background-color: #16a34a !important; color: white !important; }
-        .copy-btn.copied:hover { background-color: #15803d !important; }
+        .copy-btn.copied {
+            background-color: #16a34a !important; /* Verde brillante */
+            color: white !important;
+        }
+        .copy-btn.copied:hover {
+            background-color: #15803d !important;
+        }
 
         /* Animación de entrada para tarjetas */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
-        .card-enter { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; }
+        }
+        .card-enter {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
         
-        /* Estilos para el Navegador Principal */
-        .main-nav-btn { transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .main-nav-btn.active { background-color: #1d4ed8; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform: translateY(-2px); }
-        .dark .main-nav-btn.active { background-color: #fbbF24; color: #111827; }
+        /* Estilos para el Navegador Principal de Pestañas */
+        .main-nav-btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .main-nav-btn.active {
+            background-color: #1d4ed8; /* blue-700 */
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .dark .main-nav-btn.active {
+            background-color: #fbbF24; /* yellow-400 */
+            color: #111827; /* gray-900 */
+        }
         
-        .code-pill { background-color: #dbeafe; color: #1e40af; font-family: monospace; border-radius: 0.375rem; padding: 0.125rem 0.5rem; font-size: 0.875rem; font-weight: 600; }
-        .dark .code-pill { background-color: #374151; color: #93c5fd; }
+        /* Estilo para las píldoras de código */
+        .code-pill {
+            background-color: #dbeafe;
+            color: #1e40af;
+            font-family: monospace;
+            border-radius: 0.375rem;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .dark .code-pill {
+            background-color: #374151;
+            color: #93c5fd;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
 
-    <div id="gatekeeper" class="fixed inset-0 z-40 bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center p-4 transition-opacity duration-500">
+    <div id="gatekeeper" class="fixed inset-0 z-50 bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center p-4 transition-opacity duration-500">
         <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
             <img src="logoafore.png" alt="Logo" class="h-16 mx-auto mb-6" onerror="this.style.display='none'">
-            <h1 class="text-3xl font-bold text-blue-900 dark:text-yellow-400 mb-2">Biblioteca CRM</h1>
+            <h1 class="text-3xl font-bold text-blue-900 dark:text-yellow-400 mb-2">Biblioteca GAP</h1>
             <p class="text-gray-600 dark:text-gray-300 mb-8">Acceso exclusivo para colaboradores autorizados.</p>
             
             <div id="gatekeeper-actions" class="space-y-4">
@@ -69,20 +104,16 @@
         </div>
     </div>
 
-    <div id="app-content" class="container mx-auto p-4 sm:p-6 lg:p-8 hidden opacity-0 transition-opacity duration-500">
+    <div id="app-container" class="container mx-auto p-4 sm:p-6 lg:p-8 hidden opacity-0 transition-opacity duration-500">
         
         <div class="flex justify-between items-center py-4 px-2 mb-6">
             <div class="flex items-center gap-4">
                 <img src="logoafore.png" alt="Logo Afore Coppel" class="h-14" onerror="this.alt='Logo Afore Coppel'; this.style.display='none';">
                 <div class="border-l border-gray-300 dark:border-gray-600 h-14"></div>
-                <img src="logogap.png" alt="Logo Gerencia" class="w-24" onerror="this.alt='Logo Gerencia'; this.style.display='none';">
+                <img src="logogap.png" alt="Logo Gerencia de Atención al Público" class="w-24" onerror="this.alt='Logo Gerencia'; this.style.display='none';">
             </div>
             <div class="flex items-center gap-4">
-                <div id="user-info-display" class="hidden sm:flex flex-col items-end mr-2">
-                    <span id="user-name-span" class="text-sm font-bold text-blue-900 dark:text-yellow-400">Usuario</span>
-                    <span id="user-role-span" class="text-xs text-gray-500 dark:text-gray-400">Viewer</span>
-                </div>
-                <button id="logout-btn-main" class="text-sm font-medium text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-3 py-1 rounded transition-colors">Salir</button>
+                <div id="auth-controls" class="flex items-center gap-3"></div>
                 
                 <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
                     <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
@@ -101,66 +132,145 @@
         </div>
 
         <div id="scripts-page-container">
-            <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-20" style="background-image: url('cafe.png'); background-color: #2c3e50;">
+            <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-40" style="background-image: url('cafe.png'); background-color: #2c3e50;">
                 <div class="absolute inset-0 bg-blue-900 bg-opacity-50"></div>
                 <div class="relative z-10">
-                    <h1 class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Scripts</h1>
+                    <h1 id="script-page-title" class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Scripts</h1>
+                    <p id="script-page-slogan" class="text-lg text-gray-200 dark:text-gray-300 mt-2">Soluciones rápidas para casos de CRM en Salesforce</p>
                 </div>
             </header>
 
-            <div class="mb-8 max-w-2xl mx-auto relative">
-                <input type="text" id="search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-6 pr-4 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buscar Scripts...">
+            <div class="mb-8 max-w-2xl mx-auto">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <input type="text" id="search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-10 pr-4 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-yellow-500 transition" placeholder="Buscar por título o descripción...">
+                </div>
             </div>
 
             <nav id="category-filters" class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
-                <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">Todos</button>
-                <button data-category="requests" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all admin-only-flex items-center gap-2">
-                    Solicitudes <span id="requests-count-badge" class="hidden bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">0</span>
+                <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Todos</button>
+                <button data-category="requests" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md admin-only-flex items-center gap-2">
+                    Solicitudes
+                    <span id="requests-count-badge" class="hidden ml-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full items-center justify-center">0</span>
                 </button>
-                <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">★ Favoritos</button>
-                <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">🔥 Populares</button>
-                
-                <button data-category="unificacion" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">Unificación</button>
-                <button data-category="exp" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">Expediente</button>
-                <button data-category="parciales" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">R. Parciales</button>
-                <button data-category="totales" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">R. Totales</button>
+                <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">★ Favoritos</button>
+                <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">🔥 Populares</button>
+                <button data-category="unificacion" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Unificación/Separación</button>
+                <button data-category="exp" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Exp. y Serv.</button>
+                <button data-category="parciales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Parciales</button>
+                <button data-category="totales" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Retiros Totales</button>
+                <button data-category="extras" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Extras</button>
             </nav>
             
             <main id="scripts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
         </div>
 
         <div id="querys-page-container" class="hidden">
-            <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-20" style="background-color: #2c3e50;">
-                <div class="absolute inset-0 bg-blue-900 bg-opacity-50"></div>
+            <header class="relative text-center mb-8 bg-cover bg-center rounded-lg shadow-lg overflow-hidden py-40" style="background-image: url('cafe.png'); background-color: #2c3e50;"> <div class="absolute inset-0 bg-blue-900 bg-opacity-50"></div>
                 <div class="relative z-10">
-                    <h1 class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Querys</h1>
+                    <h1 id="query-page-title" class="text-4xl sm:text-5xl font-bold text-white dark:text-yellow-300">Biblioteca de Querys</h1>
+                    <p id="query-page-slogan" class="text-lg text-gray-200 dark:text-gray-300 mt-2">Consultas optimizadas para el análisis de datos</p>
                 </div>
             </header>
 
-            <div id="query-search-container" class="mb-8 max-w-2xl mx-auto relative">
-                <input type="text" id="query-search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-6 pr-4 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buscar Querys...">
+            <div id="query-search-container" class="mb-8 max-w-2xl mx-auto">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <input type="text" id="query-search-input" class="block w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-full py-3 pl-10 pr-4 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-yellow-500 transition" placeholder="Buscar por título o descripción...">
+                </div>
             </div>
 
             <nav id="query-category-filters" class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
-                <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">Todos</button>
-                <button data-category="requests" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all admin-only-flex items-center gap-2">
-                    Solicitudes <span id="query-requests-count-badge" class="hidden bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">0</span>
+                <button data-category="all" class="nav-button active font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Todos</button>
+                <button data-category="requests" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md admin-only-flex items-center gap-2">
+                    Solicitudes
+                    <span id="query-requests-count-badge" class="hidden ml-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full items-center justify-center">0</span>
                 </button>
-                <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">★ Favoritos</button>
-                <button data-category="aforeglobal" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">AforeGlobal</button>
-                <button data-category="safre" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">Safre</button>
-                <button data-category="learn" class="nav-button font-medium py-2 px-4 rounded-full hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 transition-all">Aprende SQL</button>
+                <button data-category="favorites" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">★ Favoritos</button>
+                <button data-category="popular" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">🔥 Populares</button>
+                <button data-category="aforeglobal" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">AforeGlobal</button>
+                <button data-category="safre" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Safre</button>
+                <button data-category="notificaciones" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Notificaciones</button>
+                <button data-category="admonafore" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">AdmonAfore</button>
+                <button data-category="serviciosafore" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">ServiciosAfore</button>
+                <button data-category="extra" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md">Extra</button>
+                <button data-category="learn" class="nav-button font-medium py-2 px-4 rounded-full transition-all duration-300 ease-in-out hover:bg-blue-700 hover:text-white dark:hover:bg-yellow-500 dark:hover:text-gray-900 hover:shadow-md flex items-center gap-2">Aprende SQL</button>
             </nav>
             
             <main id="querys-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
-            
-            <div id="sql-learning-section" class="hidden bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-                <h2 class="text-3xl font-bold text-blue-800 dark:text-yellow-400 mb-4">Conceptos Básicos SQL</h2>
-                <p class="text-gray-600 dark:text-gray-300">SELECT * FROM tabla WHERE columna = 'valor';</p>
+
+            <div id="sql-learning-section" class="hidden">
+                 <div class="mb-6 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+                    <h2 class="text-3xl font-bold text-blue-800 dark:text-yellow-400 mb-6">Conceptos Clave</h2>
+                    <p class="text-gray-700 dark:text-gray-300">SELECT * FROM tabla...</p>
+                 </div>
             </div>
         </div>
+        
+        <div id="loading-indicator" class="text-center py-10"><p class="text-gray-500 dark:text-gray-400">Cargando datos...</p></div>
+    </div>
 
-        <button id="add-item-btn" class="admin-only-flex fixed bottom-8 right-8 bg-blue-700 dark:bg-yellow-400 text-white dark:text-blue-900 w-16 h-16 rounded-full shadow-lg items-center justify-center text-3xl font-bold hover:scale-110 transition-transform z-30">+</button>
+    <footer class="text-center py-8 border-t border-gray-200 dark:border-gray-700">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            Herramienta creada por la Gerencia de Atención al Público - Afore Coppel
+        </p>
+    </footer>
+
+    <button id="add-item-btn" class="admin-only-flex fixed bottom-8 right-8 bg-blue-700 dark:bg-yellow-400 text-white dark:text-blue-900 w-16 h-16 rounded-full shadow-lg items-center justify-center text-3xl font-bold transform hover:scale-110 transition-transform z-30">+</button>
+
+    <div id="add-item-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Agregar Nuevo</h2>
+            <form id="script-form">
+                <input type="hidden" id="item-id">
+                <div class="space-y-4">
+                    <input type="text" id="item-title" placeholder="Título" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500">
+                    <textarea id="item-description" placeholder="Descripción breve" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="2"></textarea>
+                    <textarea id="item-text" placeholder="Texto completo del script/query..." class="w-full p-2 border rounded font-mono dark:bg-gray-700 dark:border-gray-600" rows="6"></textarea>
+                    
+                    <select id="item-category-script" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">-- Seleccionar Categoría --</option>
+                        <option value="unificacion">Unificación/Separación</option>
+                        <option value="exp">Exp. y Serv.</option>
+                        <option value="parciales">Retiros Parciales</option>
+                        <option value="totales">Retiros Totales</option>
+                        <option value="extras">Extras</option>
+                    </select>
+                    
+                    <select id="item-category-query" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 hidden">
+                        <option value="">-- Seleccionar Servidor --</option>
+                        <option value="aforeglobal">AforeGlobal</option>
+                        <option value="safre">Safre</option>
+                        <option value="notificaciones">Notificaciones</option>
+                        <option value="admonafore">AdmonAfore</option>
+                        <option value="serviciosafore">ServiciosAfore</option>
+                        <option value="extra">Extra</option>
+                    </select>
+
+                    <input type="text" id="item-variables" placeholder="Variables (separadas por coma, ej: FECHA, MONTO)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" id="cancel-btn" class="py-2 px-4 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancelar</button>
+                    <button type="submit" class="py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Guardar</button>
+                </div>
+            </form>
+             <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
+        </div>
+    </div>
+    
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
+            <h2 class="text-xl font-bold mb-4">¿Estás seguro?</h2>
+            <p id="delete-modal-text" class="text-gray-600 dark:text-gray-300 mb-6">Esta acción no se puede deshacer.</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-delete-btn" class="py-2 px-6 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">No</button>
+                <button id="confirm-delete-btn" class="py-2 px-6 rounded bg-red-600 text-white hover:bg-red-700">Sí</button>
+            </div>
+        </div>
     </div>
 
     <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
@@ -173,76 +283,37 @@
                     <p id="login-error" class="text-red-500 text-sm text-center hidden"></p>
                 </div>
                 <div class="mt-6">
-                    <button type="submit" class="w-full py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 font-bold">Entrar</button>
+                    <button type="submit" class="w-full py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Iniciar Sesión</button>
                 </div>
             </form>
-            <button id="close-login-modal-btn" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+            <button id="close-login-modal-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
         </div>
     </div>
 
     <div id="register-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 relative">
             <h2 class="text-2xl font-bold mb-2 text-center text-blue-800 dark:text-yellow-400">Solicitar Acceso</h2>
-            <p class="text-xs text-center text-gray-500 mb-4">Un administrador revisará tu solicitud.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">Tu solicitud será enviada al Superadministrador.</p>
             <form id="register-form">
-                <div class="space-y-3">
-                    <input type="text" id="reg-name" placeholder="Nombre Completo" required class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                    <input type="text" id="reg-area" placeholder="Área / Puesto" required class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                    <input type="email" id="reg-email" placeholder="Correo electrónico" required class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                    <input type="password" id="reg-password" placeholder="Contraseña" required class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                    <p id="reg-error" class="text-red-500 text-sm text-center hidden"></p>
+                <div class="space-y-4">
+                    <input type="text" id="reg-name" placeholder="Nombre Completo" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <input type="email" id="reg-email" placeholder="Correo electrónico" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <input type="password" id="reg-password" placeholder="Contraseña" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <input type="text" id="reg-area" placeholder="Área / Puesto" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 </div>
                 <div class="mt-6">
-                    <button type="submit" class="w-full py-2 px-4 rounded bg-green-600 text-white hover:bg-green-700 font-bold">Enviar Solicitud</button>
+                    <button type="submit" class="w-full py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500 font-bold transition-colors">Enviar Solicitud</button>
                 </div>
             </form>
-            <button id="close-reg-modal-btn" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+            <button id="close-reg-modal-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-3xl leading-none">&times;</button>
         </div>
     </div>
-
-    <div id="add-item-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
-            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Agregar Nuevo</h2>
-            <form id="script-form">
-                <input type="hidden" id="item-id">
-                <div class="space-y-4">
-                    <input type="text" id="item-title" placeholder="Título" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                    <textarea id="item-description" placeholder="Descripción breve" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white" rows="2"></textarea>
-                    <textarea id="item-text" placeholder="Texto del script/query..." class="w-full p-2 border rounded font-mono dark:bg-gray-700 dark:text-white" rows="6"></textarea>
-                    
-                    <select id="item-category-script" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                        <option value="">-- Categoría Script --</option>
-                        <option value="unificacion">Unificación</option>
-                        <option value="exp">Expediente</option>
-                        <option value="parciales">Parciales</option>
-                        <option value="totales">Totales</option>
-                    </select>
-                    
-                    <select id="item-category-query" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white hidden">
-                        <option value="">-- Servidor Query --</option>
-                        <option value="aforeglobal">AforeGlobal</option>
-                        <option value="safre">Safre</option>
-                        <option value="learn">Aprende SQL</option>
-                    </select>
-
-                    <input type="text" id="item-variables" placeholder="Variables (ej: FOLIO, FECHA)" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-white">
-                </div>
-                <div class="mt-6 flex justify-end gap-4">
-                    <button type="button" id="cancel-btn" class="py-2 px-4 rounded bg-gray-200 hover:bg-gray-300 text-gray-800">Cancelar</button>
-                    <button type="submit" class="py-2 px-4 rounded bg-blue-700 text-white hover:bg-blue-800 font-bold">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+    
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
-            <h2 class="text-xl font-bold mb-4">¿Confirmar acción?</h2>
-            <p id="delete-modal-text" class="text-gray-600 dark:text-gray-300 mb-6">...</p>
-            <div class="flex justify-center gap-4">
-                <button id="cancel-delete-btn" class="py-2 px-6 rounded bg-gray-200 text-gray-800">No</button>
-                <button id="confirm-delete-btn" class="py-2 px-6 rounded bg-red-600 text-white hover:bg-red-700">Sí</button>
-            </div>
+            <h2 id="info-modal-title" class="text-xl font-bold mb-4 text-blue-800 dark:text-yellow-400">Notificación</h2>
+            <p id="info-modal-text" class="text-gray-600 dark:text-gray-300 mb-6">...</p>
+            <button id="info-modal-close" class="py-2 px-6 rounded bg-blue-700 text-white hover:bg-blue-800 dark:bg-yellow-400 dark:text-blue-900 dark:hover:bg-yellow-500">Entendido</button>
         </div>
     </div>
 
@@ -250,8 +321,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-
-        // --- CONFIGURACION FIREBASE ---
+        
         const firebaseConfig = {
           apiKey: "AIzaSyAvq0CF94lVwGZAtXiFZKHwS5q4ZA489lM",
           authDomain: "scripts-une-gap.firebaseapp.com",
@@ -266,524 +336,531 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // COLECCIONES
         const scriptsCol = collection(db, 'scripts');
         const querysCol = collection(db, 'querys');
         const requestsCol = collection(db, 'solicitudes');
         const queryRequestsCol = collection(db, 'solicitudes_querys');
         const userRolesCol = collection(db, 'user_roles');
 
-        // VARIABLES DE ESTADO
-        let currentUser = null;
-        let currentUserRole = null; // 'superadmin', 'admin', 'viewer'
         let currentView = 'scripts';
-        let allScripts = [];
-        let allQuerys = [];
-        let pendingRequests = []; 
-        let pendingUsers = []; // Nueva lista para usuarios pendientes
-        let favorites = JSON.parse(localStorage.getItem('favScripts')) || [];
-        
-        // ELEMENTOS DOM
+        let currentUserRole = null;
+        let currentUser = null;
+        let favorites = JSON.parse(localStorage.getItem('favoriteScripts')) || [];
+        let queryFavorites = JSON.parse(localStorage.getItem('favoriteQuerys')) || [];
+        const copiedScripts = new Set();
+        const copiedQuerys = new Set();
+
+        let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [], pendingQueryRequests = [];
+
+        // DOM Elements
         const gatekeeper = document.getElementById('gatekeeper');
-        const gatekeeperActions = document.getElementById('gatekeeper-actions');
-        const gatekeeperLoading = document.getElementById('gatekeeper-loading');
-        const appContent = document.getElementById('app-content');
+        const appContainer = document.getElementById('app-container');
         const scriptsContainer = document.getElementById('scripts-container');
         const querysContainer = document.getElementById('querys-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const authControls = document.getElementById('auth-controls');
 
-        // --- AUTENTICACIÓN Y MANEJO DE ROLES ---
+        // --- AUTENTICACIÓN ---
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // 1. Usuario logueado, verificar Rol y Estado en Firestore
-                gatekeeperActions.classList.add('hidden');
-                gatekeeperLoading.classList.remove('hidden');
+            if(user) {
+                document.getElementById('gatekeeper-loading').classList.remove('hidden');
+                document.getElementById('gatekeeper-actions').classList.add('hidden');
                 
                 try {
                     const docSnap = await getDoc(doc(userRolesCol, user.uid));
-                    if (docSnap.exists()) {
-                        const userData = docSnap.data();
-                        if (userData.status === 'active') {
-                            // ACCESO CONCEDIDO
-                            currentUser = user;
-                            currentUserRole = userData.role;
-                            
-                            // Actualizar UI info usuario
-                            document.getElementById('user-name-span').textContent = userData.displayName || user.email;
-                            document.getElementById('user-role-span').textContent = userData.role.toUpperCase();
+                    if(docSnap.exists() && docSnap.data().status === 'active') {
+                        currentUser = user;
+                        currentUserRole = docSnap.data().role;
+                        
+                        // Render Auth Header
+                        authControls.innerHTML = `
+                            <div class="flex flex-col items-end mr-2 hidden sm:flex">
+                                <span class="text-xs font-bold text-blue-800 dark:text-yellow-400">${docSnap.data().displayName || 'Usuario'}</span>
+                                <span class="text-[10px] text-gray-500 dark:text-gray-400">${currentUserRole.toUpperCase()}</span>
+                            </div>
+                            <button id="logout-btn" class="text-sm font-bold text-red-500 border border-red-200 px-2 py-1 rounded hover:bg-red-50">Salir</button>
+                        `;
+                        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-                            setupUIForRole(currentUserRole);
-                            loadData(); // Cargar datos de Firestore
-                            
-                            // Ocultar Gatekeeper, Mostrar App con animación
-                            gatekeeper.classList.add('opacity-0');
-                            setTimeout(() => {
-                                gatekeeper.classList.add('hidden');
-                                appContent.classList.remove('hidden');
-                                setTimeout(() => appContent.classList.remove('opacity-0'), 50);
-                            }, 500);
-                        } else {
-                            // PENDIENTE DE APROBACION
-                            alert("Tu cuenta está pendiente de aprobación por un administrador.");
-                            await signOut(auth);
-                            resetGatekeeper();
-                        }
+                        setupListeners();
+                        
+                        gatekeeper.classList.add('opacity-0');
+                        setTimeout(() => {
+                            gatekeeper.classList.add('hidden');
+                            appContainer.classList.remove('hidden');
+                            setTimeout(() => appContainer.classList.remove('opacity-0'), 50);
+                        }, 500);
+                        
+                        document.body.classList.toggle('admin-mode', currentUserRole === 'superadmin' || currentUserRole === 'admin');
+
                     } else {
-                        // Raro: Usuario Auth existe pero no en DB. Crear como pendiente.
-                         await setDoc(doc(userRolesCol, user.uid), {
-                            email: user.email,
-                            role: 'viewer',
-                            status: 'pending',
-                            createdAt: serverTimestamp()
-                        });
-                        alert("Cuenta creada. Espera aprobación.");
+                        alert("Cuenta pendiente de aprobación o no activa.");
                         await signOut(auth);
                         resetGatekeeper();
                     }
-                } catch (error) {
-                    console.error("Error auth:", error);
-                    alert("Error verificando credenciales.");
+                } catch(e) {
+                    console.error(e);
+                    alert("Error de conexión.");
+                    await signOut(auth);
                     resetGatekeeper();
                 }
             } else {
-                // 2. No hay usuario logueado
                 resetGatekeeper();
             }
         });
 
         function resetGatekeeper() {
             gatekeeper.classList.remove('hidden', 'opacity-0');
-            appContent.classList.add('hidden', 'opacity-0');
-            gatekeeperLoading.classList.add('hidden');
-            gatekeeperActions.classList.remove('hidden');
+            appContainer.classList.add('hidden', 'opacity-0');
+            document.getElementById('gatekeeper-loading').classList.add('hidden');
+            document.getElementById('gatekeeper-actions').classList.remove('hidden');
+            authControls.innerHTML = '';
             currentUser = null;
-            currentUserRole = null;
         }
 
-        function setupUIForRole(role) {
-            if (role === 'superadmin' || role === 'admin') {
-                document.body.classList.add('admin-mode');
-            } else {
-                document.body.classList.remove('admin-mode');
-            }
-        }
-
-        // --- CARGA DE DATOS ---
-        function loadData() {
-            // Scripts
+        function setupListeners() {
             onSnapshot(scriptsCol, (snap) => {
                 allScripts = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (currentView === 'scripts') renderContent();
+                if(currentView === 'scripts') applyScriptFilters();
+                loadingIndicator.style.display = 'none';
             });
-            // Querys
             onSnapshot(querysCol, (snap) => {
                 allQuerys = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (currentView === 'querys') renderContent();
+                if(currentView === 'querys') applyQueryFilters();
             });
-
-            // Solo Superadmin escucha solicitudes y usuarios pendientes
-            if (currentUserRole === 'superadmin') {
-                onSnapshot(requestsCol, (snap) => {
-                    pendingRequests = snap.docs.map(d => ({id: d.id, type: 'script', ...d.data()}));
-                    updateBadges();
-                });
+            
+            if(currentUserRole === 'superadmin') {
+                onSnapshot(requestsCol, (snap) => pendingRequests = snap.docs.map(d => ({id: d.id, data: d.data()})));
+                onSnapshot(queryRequestsCol, (snap) => pendingQueryRequests = snap.docs.map(d => ({id: d.id, data: d.data()})));
                 onSnapshot(userRolesCol, (snap) => {
                     pendingUsers = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'pending');
-                    updateBadges();
+                    updateBadgeCount();
                 });
             }
         }
 
-        function updateBadges() {
-            const count = pendingRequests.length + pendingUsers.length;
-            const badge = document.getElementById('requests-count-badge');
-            if(badge) {
-                badge.textContent = count;
-                badge.classList.toggle('hidden', count === 0);
-            }
-            // Si estamos viendo la pestaña de solicitudes, refrescar
-            const activeFilter = document.querySelector('#category-filters .nav-button.active');
-            if(activeFilter && activeFilter.dataset.category === 'requests') {
-                renderContent();
-            }
-        }
-
-        // --- RENDERIZADO PRINCIPAL ---
-        function renderContent() {
-            const container = currentView === 'scripts' ? scriptsContainer : querysContainer;
-            container.innerHTML = '';
+        // --- RENDERIZADO ORIGINAL (RESTAURADO) ---
+        
+        function renderScripts(list) {
+            scriptsContainer.innerHTML = '';
+            const isPop = document.querySelector('#category-filters .active').dataset.category === 'popular';
             
-            // Determinar filtros
-            const navId = currentView === 'scripts' ? 'category-filters' : 'query-category-filters';
-            const activeBtn = document.querySelector(`#${navId} .active`);
-            const category = activeBtn ? activeBtn.dataset.category : 'all';
-            const searchVal = document.getElementById(currentView === 'scripts' ? 'search-input' : 'query-search-input').value.toLowerCase();
-            
-            let items = currentView === 'scripts' ? allScripts : allQuerys;
-            
-            // CASO ESPECIAL: SOLICITUDES (SUPERADMIN)
-            if (category === 'requests' && currentUserRole === 'superadmin') {
-                renderRequestsView(container);
-                return;
-            }
+            list.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter mb-6';
+                card.dataset.id = s.id; card.dataset.type = 'scripts';
+                
+                // BADGE POPULAR (FLAMA)
+                let flame = isPop ? `<div class="absolute top-3 right-20 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">🔥 ${s.copyCount||0}</div>` : '';
+                
+                // ESTRELLA FAVORITO
+                let star = !isPop ? `<button class="favorite-btn absolute top-2 right-2 text-gray-400 hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${favorites.includes(s.id)?'text-yellow-400':'text-gray-400'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>` : '';
+                
+                // INPUTS DE VARIABLES (IMPORTANTE RESTAURADO)
+                let vars = s.variables && s.variables.length > 0 ? `<div class="mt-4 border-t pt-3"><h4 class="text-sm font-bold mb-2 text-gray-500">Variables:</h4>${s.variables.map(v=>`<div class="flex gap-2 mb-1 items-center"><label class="text-xs font-mono w-1/3 truncate" title="${v}">${v}:</label><input class="variable-input w-2/3 border rounded text-sm p-1 dark:bg-gray-700" data-variable-name="${v}" placeholder="Valor..."></div>`).join('')}</div>` : '';
+                
+                // ADMIN MENU (3 PUNTOS)
+                let admin = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400 hover:text-blue-500 text-xl">•••</button><div class="options-menu absolute right-0 mt-2 w-32 bg-white dark:bg-gray-700 shadow-lg hidden z-20 rounded border dark:border-gray-600"><a href="#" class="edit-btn block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600">Editar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-600">Borrar</a></div></div>`;
 
-            // Filtrado normal
-            if (category !== 'all') {
-                if (category === 'favorites') items = items.filter(i => favorites.includes(i.id));
-                else if (category === 'popular') items = [...items].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-                else items = items.filter(i => i.category === category);
-            }
-            if (searchVal) {
-                items = items.filter(i => i.title.toLowerCase().includes(searchVal) || i.description.toLowerCase().includes(searchVal));
-            }
-
-            if(items.length === 0) {
-                container.innerHTML = '<p class="text-center col-span-full text-gray-500">No hay resultados.</p>';
-                return;
-            }
-
-            items.forEach(item => {
-                const card = createCardHTML(item);
-                container.appendChild(card);
+                card.innerHTML = `
+                    ${flame}${admin}
+                    <div class="p-6 flex-grow">
+                        <div class="flex justify-between items-start">
+                            <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-16 mb-2">${s.title}</h2>
+                            ${star}
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${s.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg text-sm max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700">
+                            <pre class="script-content font-sans text-gray-700 dark:text-gray-200">${s.scriptText}</pre>
+                        </div>
+                        ${vars}
+                    </div>
+                    <div class="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg transition-colors hover:bg-yellow-500">Copiar Script</button>
+                    </div>`;
+                
+                if(copiedScripts.has(s.id)) {
+                    const btn = card.querySelector('.copy-btn');
+                    btn.textContent = '¡Copiado!';
+                    btn.classList.add('copied');
+                }
+                scriptsContainer.appendChild(card);
             });
         }
 
-        function renderRequestsView(container) {
-            container.innerHTML = '';
+        function renderQuerys(list) {
+            querysContainer.innerHTML = '';
+            const isPop = document.querySelector('#query-category-filters .active').dataset.category === 'popular';
             
-            // 1. Usuarios Pendientes
-            if (pendingUsers.length > 0) {
-                const userHeader = document.createElement('h3');
-                userHeader.className = 'col-span-full font-bold text-lg text-blue-800 dark:text-yellow-400 border-b pb-2';
-                userHeader.textContent = "Usuarios Pendientes de Aprobación";
-                container.appendChild(userHeader);
-
-                pendingUsers.forEach(u => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-blue-50 dark:bg-gray-800 border-l-4 border-blue-500 p-4 rounded shadow';
-                    card.innerHTML = `
-                        <div class="font-bold text-lg">${u.displayName || 'Sin nombre'}</div>
-                        <div class="text-sm text-gray-600 dark:text-gray-300">${u.email}</div>
-                        <div class="text-sm italic mb-3">${u.area || 'Área no esp.'}</div>
-                        <div class="flex gap-2">
-                            <button onclick="approveUser('${u.id}', true)" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm">Aprobar</button>
-                            <button onclick="approveUser('${u.id}', false)" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Rechazar</button>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            }
-
-            // 2. Solicitudes de Scripts (Simplificado para el ejemplo)
-            if (pendingRequests.length > 0) {
-                const reqHeader = document.createElement('h3');
-                reqHeader.className = 'col-span-full font-bold text-lg text-blue-800 dark:text-yellow-400 border-b pb-2 mt-6';
-                reqHeader.textContent = "Solicitudes de Contenido";
-                container.appendChild(reqHeader);
+            list.forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all flex flex-col card-enter mb-6';
+                card.dataset.id = q.id; card.dataset.type = 'query';
                 
-                pendingRequests.forEach(req => {
-                     const card = document.createElement('div');
-                     card.className = 'bg-white dark:bg-gray-800 p-4 rounded shadow border relative';
-                     card.innerHTML = `
-                        <div class="absolute top-2 right-2 text-xs font-bold bg-yellow-200 px-2 rounded">${req.action.toUpperCase()}</div>
-                        <h4 class="font-bold">${req.title}</h4>
-                        <p class="text-sm text-gray-600">${req.description}</p>
-                        <div class="mt-3 flex gap-2">
-                            <button class="btn-approve-req px-3 py-1 bg-green-600 text-white rounded text-sm" data-id="${req.id}">Aprobar</button>
-                            <button class="btn-reject-req px-3 py-1 bg-red-500 text-white rounded text-sm" data-id="${req.id}">Rechazar</button>
+                let flame = isPop ? `<div class="absolute top-3 right-20 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">🔥 ${q.copyCount||0}</div>` : '';
+                let star = !isPop ? `<button class="favorite-btn absolute top-2 right-2 text-gray-400 hover:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="${queryFavorites.includes(q.id)?'text-yellow-400':'text-gray-400'}" viewBox="0 0 16 16"><path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/></svg></button>` : '';
+                let admin = `<div class="admin-only-flex absolute top-2 right-10 z-10"><button class="options-btn p-1 text-gray-400 hover:text-blue-500 text-xl">•••</button><div class="options-menu absolute right-0 mt-2 w-32 bg-white dark:bg-gray-700 shadow-lg hidden z-20 rounded border dark:border-gray-600"><a href="#" class="edit-btn block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600">Editar</a><a href="#" class="delete-btn block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-600">Borrar</a></div></div>`;
+
+                // SERVIDOR INFO (RESTAURADO)
+                const serverMap = { 'aforeglobal': 'AforeGlobal', 'safre': 'Safre', 'notificaciones': 'Notificaciones', 'admonafore': 'AdmonAfore', 'serviciosafore': 'ServiciosAfore', 'extra': 'Extra' };
+                const serverName = serverMap[q.category] || q.category;
+
+                card.innerHTML = `
+                    ${flame}${admin}
+                    <div class="p-6 flex-grow">
+                        <div class="flex justify-between items-start">
+                            <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-16 mb-2">${q.title}</h2>
+                            ${star}
                         </div>
-                     `;
-                     // Event listeners manuales para evitar conflictos de scope global
-                     card.querySelector('.btn-approve-req').onclick = () => handleRequest(req, true);
-                     card.querySelector('.btn-reject-req').onclick = () => handleRequest(req, false);
-                     container.appendChild(card);
-                });
-            }
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">${q.description}</p>
+                        <div class="bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg text-sm max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700">
+                            <pre class="script-content font-mono text-gray-700 dark:text-gray-200">${q.scriptText}</pre>
+                        </div>
+                        <div class="mt-4 border-t pt-2 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                            Servidor: <span class="text-blue-600 dark:text-yellow-400">${serverName}</span>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <button class="copy-btn w-full bg-yellow-400 text-blue-900 font-bold py-2 rounded-lg transition-colors hover:bg-yellow-500">Copiar Query</button>
+                    </div>`;
 
-            if (pendingUsers.length === 0 && pendingRequests.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-gray-500">No hay solicitudes pendientes.</p>';
-            }
+                if(copiedQuerys.has(q.id)) {
+                    const btn = card.querySelector('.copy-btn');
+                    btn.textContent = '¡Copiado!';
+                    btn.classList.add('copied');
+                }
+                querysContainer.appendChild(card);
+            });
         }
 
-        function createCardHTML(item) {
-            const div = document.createElement('div');
-            div.className = 'relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col card-enter hover:-translate-y-1 transition-transform';
-            div.dataset.id = item.id;
+        function updateBadgeCount() {
+             const count = pendingRequests.length + pendingQueryRequests.length + pendingUsers.length;
+             document.getElementById('requests-count-badge').textContent = count;
+             document.getElementById('requests-count-badge').classList.toggle('hidden', count === 0);
+             
+             // Si estamos en vista de solicitudes, refrescar
+             const active = document.querySelector('#category-filters .active');
+             if(active && active.dataset.category === 'requests') renderCombinedRequests();
+        }
 
-            const isFav = favorites.includes(item.id);
-            const type = currentView === 'scripts' ? 'script' : 'query';
+        // --- LOGICA DE FILTRADO ---
+        function applyScriptFilters() {
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const cat = document.querySelector('#category-filters .active').dataset.category;
             
-            // Botones Admin
-            const adminBtns = `
-                <div class="admin-only-flex absolute top-2 right-10 z-10">
-                     <button class="text-gray-400 hover:text-blue-600 p-1" onclick="openEdit('${item.id}')">✎</button>
-                     <button class="text-gray-400 hover:text-red-600 p-1" onclick="openDelete('${item.id}')">🗑</button>
-                </div>
-            `;
-
-            div.innerHTML = `
-                ${adminBtns}
-                <div class="p-6 flex-grow">
-                    <div class="flex justify-between">
-                        <h2 class="text-xl font-bold text-blue-800 dark:text-yellow-400 pr-16">${item.title}</h2>
-                        <button class="absolute top-2 right-2 text-2xl ${isFav ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-400'}" onclick="toggleFav('${item.id}')">★</button>
-                    </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">${item.description}</p>
-                    <div class="bg-gray-100 dark:bg-gray-900/50 p-3 rounded text-sm max-h-40 overflow-y-auto">
-                        <pre class="script-content font-mono">${item.scriptText}</pre>
-                    </div>
-                </div>
-                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700">
-                    <button onclick="copyContent(this, '${item.id}')" class="copy-btn w-full py-2 rounded font-bold bg-yellow-400 text-blue-900 hover:bg-yellow-500 transition-colors">
-                        Copiar
-                    </button>
-                </div>
-            `;
-            return div;
+            if(cat === 'requests') { renderCombinedRequests(); return; }
+            
+            let filtered = allScripts;
+            if(cat === 'favorites') filtered = filtered.filter(s => favorites.includes(s.id));
+            else if(cat === 'popular') filtered = [...filtered].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+            else if(cat !== 'all') filtered = filtered.filter(s => s.category === cat);
+            
+            if(term) filtered = filtered.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
+            renderScripts(filtered);
         }
 
-        // --- FUNCIONES GLOBALES (Expuestas a Window para onclicks HTML) ---
-        window.approveUser = async (uid, approved) => {
-            if(!approved) {
-                if(confirm("¿Rechazar y eliminar solicitud?")) await deleteDoc(doc(userRolesCol, uid));
-            } else {
-                await updateDoc(doc(userRolesCol, uid), { status: 'active', role: 'viewer' }); // Por defecto rol viewer
+        function applyQueryFilters() {
+            const term = document.getElementById('query-search-input').value.toLowerCase();
+            const cat = document.querySelector('#query-category-filters .active').dataset.category;
+
+            let filtered = allQuerys;
+            if(cat === 'favorites') filtered = filtered.filter(q => queryFavorites.includes(q.id));
+            else if(cat === 'popular') filtered = [...filtered].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+            else if(cat !== 'all' && cat !== 'learn') filtered = filtered.filter(q => q.category === cat);
+
+            if(term) filtered = filtered.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
+            renderQuerys(filtered);
+        }
+
+        function renderCombinedRequests() {
+            scriptsContainer.innerHTML = '';
+            if(pendingUsers.length === 0 && pendingRequests.length === 0 && pendingQueryRequests.length === 0) {
+                scriptsContainer.innerHTML = '<p class="text-center col-span-3 text-gray-500">No hay solicitudes.</p>';
+                return;
             }
-        };
+            
+            // Usuarios Pendientes
+            pendingUsers.forEach(u => {
+                scriptsContainer.innerHTML += `
+                    <div class="bg-blue-50 dark:bg-gray-800 border-l-4 border-blue-500 p-4 rounded shadow">
+                        <h4 class="font-bold text-blue-800 dark:text-blue-400">USUARIO NUEVO</h4>
+                        <p class="font-bold">${u.displayName}</p>
+                        <p class="text-sm">${u.email} - ${u.area}</p>
+                        <div class="mt-2 flex gap-2">
+                            <button onclick="approveUser('${u.id}', true)" class="bg-green-600 text-white px-3 py-1 rounded text-sm">Aprobar</button>
+                            <button onclick="approveUser('${u.id}', false)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Rechazar</button>
+                        </div>
+                    </div>`;
+            });
 
-        window.handleRequest = async (req, approved) => {
-             if(approved) {
-                 const data = { 
-                     title: req.title, description: req.description, scriptText: req.scriptText, 
-                     category: req.category, variables: req.variables || [], updatedAt: serverTimestamp()
-                 };
-                 const col = currentView === 'scripts' ? scriptsCol : querysCol;
-                 
-                 if(req.action === 'add') { data.copyCount = 0; await addDoc(col, data); }
-                 else if(req.action === 'edit') await updateDoc(doc(col, req.originalId), data);
-                 else if(req.action === 'delete') await deleteDoc(doc(col, req.originalId));
-             }
-             await deleteDoc(doc(requestsCol, req.id));
-        };
+            // Solicitudes de Contenido
+            [...pendingRequests, ...pendingQueryRequests].forEach(r => {
+                const d = r.data;
+                scriptsContainer.innerHTML += `
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded shadow border dark:border-gray-700 relative">
+                        <span class="absolute top-2 right-2 text-xs bg-yellow-200 text-black px-2 rounded font-bold">${d.action.toUpperCase()}</span>
+                        <h4 class="font-bold text-lg">${d.title}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${d.description}</p>
+                        <div class="flex gap-2 mt-2">
+                             <button onclick="handleRequest('${r.id}', '${r.data.category ? 'script' : 'query'}', true)" class="bg-green-600 text-white px-3 py-1 rounded text-sm">Aprobar</button>
+                             <button onclick="handleRequest('${r.id}', '${r.data.category ? 'script' : 'query'}', false)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Rechazar</button>
+                        </div>
+                    </div>`;
+            });
+        }
 
-        window.toggleFav = (id) => {
-            const idx = favorites.indexOf(id);
-            if(idx > -1) favorites.splice(idx, 1); else favorites.push(id);
-            localStorage.setItem('favScripts', JSON.stringify(favorites));
-            renderContent();
-        };
+        // --- EVENTOS GLOBALES CLICK (Delegación) ---
+        document.body.addEventListener('click', async (e) => {
+            // Copiar
+            const copyBtn = e.target.closest('.copy-btn');
+            if(copyBtn) {
+                const card = copyBtn.closest('[data-id]');
+                const type = card.dataset.type;
+                const id = card.dataset.id;
+                
+                let textToCopy = card.querySelector('.script-content').textContent;
+                
+                // Lógica de reemplazo de variables
+                if(type === 'scripts') {
+                    card.querySelectorAll('.variable-input').forEach(input => {
+                        const varName = input.dataset.variableName;
+                        const val = input.value || `[${varName}]`;
+                        textToCopy = textToCopy.replaceAll(varName, val);
+                    });
+                }
+                
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    // Animacion y conteo
+                    const col = type === 'scripts' ? scriptsCol : querysCol;
+                    const set = type === 'scripts' ? copiedScripts : copiedQuerys;
+                    set.add(id);
+                    updateDoc(doc(col, id), { copyCount: increment(1) });
+                    type === 'scripts' ? applyScriptFilters() : applyQueryFilters();
+                    setTimeout(() => { set.delete(id); type === 'scripts' ? applyScriptFilters() : applyQueryFilters(); }, 2000);
+                } catch(err) { console.error(err); }
+            }
 
-        window.copyContent = async (btn, id) => {
-             const item = (currentView === 'scripts' ? allScripts : allQuerys).find(i => i.id === id);
-             if(!item) return;
-             try {
-                 await navigator.clipboard.writeText(item.scriptText);
-                 btn.textContent = "¡Copiado!";
-                 btn.classList.add('copied');
-                 
-                 // Actualizar contador
-                 const col = currentView === 'scripts' ? scriptsCol : querysCol;
-                 await updateDoc(doc(col, id), { copyCount: increment(1) });
-                 
-                 setTimeout(() => {
-                     btn.textContent = "Copiar";
-                     btn.classList.remove('copied');
-                 }, 2000);
-             } catch(e) { console.error(e); }
-        };
+            // Favoritos
+            const favBtn = e.target.closest('.favorite-btn');
+            if(favBtn) {
+                const card = favBtn.closest('[data-id]');
+                const id = card.dataset.id;
+                const type = card.dataset.type;
+                const list = type === 'scripts' ? favorites : queryFavorites;
+                const key = type === 'scripts' ? 'favoriteScripts' : 'favoriteQuerys';
+                
+                const idx = list.indexOf(id);
+                if(idx > -1) list.splice(idx, 1); else list.push(id);
+                localStorage.setItem(key, JSON.stringify(list));
+                type === 'scripts' ? applyScriptFilters() : applyQueryFilters();
+            }
 
-        // --- MODALES Y EVENTOS DE UI ---
-        const loginModal = document.getElementById('login-modal');
-        const regModal = document.getElementById('register-modal');
-        const itemModal = document.getElementById('add-item-modal');
-        const deleteModal = document.getElementById('delete-confirm-modal');
+            // Admin Menus
+            const optBtn = e.target.closest('.options-btn');
+            if(optBtn) {
+                document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+                optBtn.nextElementSibling.classList.remove('hidden');
+                e.stopPropagation();
+            } else if (!e.target.closest('.options-menu')) {
+                document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+            }
 
-        // Botones Gatekeeper
-        document.getElementById('btn-landing-login').onclick = () => openModal(loginModal);
-        document.getElementById('btn-landing-register').onclick = () => openModal(regModal);
-        
-        // Botones Cerrar Modales
-        document.querySelectorAll('[id^="close-"]').forEach(btn => {
-            btn.onclick = () => closeModal(btn.closest('div[id$="-modal"]'));
+            // Modales de Edición/Borrado
+            if(e.target.closest('.edit-btn')) {
+                e.preventDefault();
+                const card = e.target.closest('[data-id]');
+                openEditModal(card.dataset.id, card.dataset.type);
+            }
+            if(e.target.closest('.delete-btn')) {
+                e.preventDefault();
+                const card = e.target.closest('[data-id]');
+                openDeleteModal(card.dataset.id, card.dataset.type);
+            }
         });
-        document.getElementById('cancel-btn').onclick = () => closeModal(itemModal);
-        document.getElementById('cancel-delete-btn').onclick = () => closeModal(deleteModal);
 
-        // Helper Modal
-        function openModal(modal) { modal.classList.remove('hidden'); setTimeout(()=>modal.classList.remove('opacity-0'), 10); }
-        function closeModal(modal) { modal.classList.add('opacity-0'); setTimeout(()=>modal.classList.add('hidden'), 300); }
-
-        // LOGOUT
-        document.getElementById('logout-btn-main').onclick = async () => {
-             await signOut(auth);
-             window.location.reload();
-        };
-
-        // LOGIN SUBMIT
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
-                closeModal(loginModal);
-            } catch(err) {
-                document.getElementById('login-error').textContent = "Error: " + err.message;
-                document.getElementById('login-error').classList.remove('hidden');
-            }
-        };
-
-        // REGISTER SUBMIT
-        document.getElementById('register-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-password').value;
-            const name = document.getElementById('reg-name').value;
-            const area = document.getElementById('reg-area').value;
-            
-            try {
-                const cred = await createUserWithEmailAndPassword(auth, email, pass);
-                // Crear doc de rol
-                await setDoc(doc(userRolesCol, cred.user.uid), {
-                    email, displayName: name, area, role: 'viewer', status: 'pending', createdAt: serverTimestamp()
-                });
-                alert("Solicitud enviada correctamente.");
-                await signOut(auth); // Desloguear para esperar aprobación
-                closeModal(regModal);
-            } catch(err) {
-                alert("Error registro: " + err.message);
-            }
-        };
-
-        // --- CRUD LOGIC (Simplificada) ---
+        // --- MANEJO DE MODALES ---
+        const itemModal = document.getElementById('add-item-modal');
         const itemForm = document.getElementById('script-form');
         const itemIdInput = document.getElementById('item-id');
         
         document.getElementById('add-item-btn').onclick = () => {
             itemForm.reset(); itemIdInput.value = '';
-            // Mostrar campos segun vista actual
             const isScript = currentView === 'scripts';
             document.getElementById('item-category-script').classList.toggle('hidden', !isScript);
             document.getElementById('item-category-query').classList.toggle('hidden', isScript);
+            document.getElementById('item-variables').classList.toggle('hidden', !isScript);
             document.getElementById('modal-title').textContent = isScript ? "Nuevo Script" : "Nueva Query";
             openModal(itemModal);
         };
 
-        window.openEdit = (id) => {
-            const item = (currentView === 'scripts' ? allScripts : allQuerys).find(i => i.id === id);
+        function openEditModal(id, type) {
+            const list = type === 'scripts' ? allScripts : allQuerys;
+            const item = list.find(i => i.id === id);
             if(!item) return;
+            
             itemIdInput.value = id;
             document.getElementById('item-title').value = item.title;
             document.getElementById('item-description').value = item.description;
             document.getElementById('item-text').value = item.scriptText;
-            document.getElementById('item-variables').value = (item.variables || []).join(', ');
             
-            const isScript = currentView === 'scripts';
-            document.getElementById('item-category-script').value = item.category;
-            document.getElementById('item-category-query').value = item.category;
-            
-            document.getElementById('item-category-script').classList.toggle('hidden', !isScript);
-            document.getElementById('item-category-query').classList.toggle('hidden', isScript);
+            if(type === 'scripts') {
+                document.getElementById('item-category-script').value = item.category;
+                document.getElementById('item-variables').value = (item.variables || []).join(', ');
+                document.getElementById('item-category-script').classList.remove('hidden');
+                document.getElementById('item-category-query').classList.add('hidden');
+                document.getElementById('item-variables').classList.remove('hidden');
+            } else {
+                document.getElementById('item-category-query').value = item.category;
+                document.getElementById('item-category-script').classList.add('hidden');
+                document.getElementById('item-category-query').classList.remove('hidden');
+                document.getElementById('item-variables').classList.add('hidden');
+            }
             document.getElementById('modal-title').textContent = "Editar";
             openModal(itemModal);
-        };
+        }
 
         itemForm.onsubmit = async (e) => {
             e.preventDefault();
             const id = itemIdInput.value;
-            const title = document.getElementById('item-title').value;
-            const desc = document.getElementById('item-description').value;
-            const text = document.getElementById('item-text').value;
-            const cat = currentView === 'scripts' ? document.getElementById('item-category-script').value : document.getElementById('item-category-query').value;
-            const vars = document.getElementById('item-variables').value.split(',').filter(v=>v);
+            const isScript = currentView === 'scripts';
+            const col = isScript ? scriptsCol : querysCol;
+            const reqCol = isScript ? requestsCol : queryRequestsCol;
 
-            const data = { title, description: desc, scriptText: text, category: cat, variables: vars, updatedAt: serverTimestamp() };
-            const col = currentView === 'scripts' ? scriptsCol : querysCol;
+            const data = {
+                title: document.getElementById('item-title').value,
+                description: document.getElementById('item-description').value,
+                scriptText: document.getElementById('item-text').value,
+                category: isScript ? document.getElementById('item-category-script').value : document.getElementById('item-category-query').value,
+                variables: isScript ? document.getElementById('item-variables').value.split(',').map(v=>v.trim()).filter(v=>v) : [],
+                updatedAt: serverTimestamp()
+            };
 
             try {
-                if (currentUserRole === 'superadmin') {
+                if(currentUserRole === 'superadmin') {
                     if(id) await updateDoc(doc(col, id), data);
                     else { data.copyCount = 0; await addDoc(col, data); }
                 } else {
-                    // Solicitud
-                    await addDoc(requestsCol, { ...data, action: id ? 'edit' : 'add', originalId: id || null, status: 'pending', requestedBy: currentUser.uid });
-                    alert("Solicitud enviada al administrador.");
+                    await addDoc(reqCol, { ...data, action: id?'edit':'add', originalId: id||null, status:'pending', requestedBy: currentUser.uid });
+                    alert("Solicitud enviada.");
                 }
                 closeModal(itemModal);
-            } catch(err) { alert("Error: " + err.message); }
+            } catch(err) { alert(err.message); }
         };
 
-        // Eliminar
+        // Lógica Borrar
         let deleteTarget = null;
-        window.openDelete = (id) => {
-            deleteTarget = id;
+        function openDeleteModal(id, type) {
+            deleteTarget = { id, type };
             document.getElementById('delete-modal-text').textContent = currentUserRole === 'superadmin' ? "¿Eliminar permanentemente?" : "¿Solicitar eliminación?";
-            openModal(deleteModal);
-        };
+            openModal(document.getElementById('delete-confirm-modal'));
+        }
+        
         document.getElementById('confirm-delete-btn').onclick = async () => {
             if(!deleteTarget) return;
-            const col = currentView === 'scripts' ? scriptsCol : querysCol;
+            const { id, type } = deleteTarget;
+            const col = type === 'scripts' ? scriptsCol : querysCol;
+            const reqCol = type === 'scripts' ? requestsCol : queryRequestsCol;
+            const list = type === 'scripts' ? allScripts : allQuerys;
+            
             try {
-                if(currentUserRole === 'superadmin') await deleteDoc(doc(col, deleteTarget));
+                if(currentUserRole === 'superadmin') await deleteDoc(doc(col, id));
                 else {
-                     const item = (currentView === 'scripts' ? allScripts : allQuerys).find(i => i.id === deleteTarget);
-                     await addDoc(requestsCol, { ...item, action: 'delete', originalId: deleteTarget, status: 'pending', requestedBy: currentUser.uid });
-                     alert("Solicitud de eliminación enviada.");
+                    const item = list.find(i => i.id === id);
+                    await addDoc(reqCol, { ...item, action:'delete', originalId: id, status:'pending', requestedBy: currentUser.uid });
+                    alert("Solicitud enviada.");
                 }
-                closeModal(deleteModal);
-            } catch(e) { alert("Error: " + e.message); }
+                closeModal(document.getElementById('delete-confirm-modal'));
+            } catch(err) { alert(err.message); }
         };
 
-        // --- CAMBIO DE VISTA ---
-        document.getElementById('main-nav').onclick = (e) => {
-             const btn = e.target.closest('.main-nav-btn');
-             if(!btn) return;
-             currentView = btn.dataset.view;
-             
-             // Actualizar Tabs UI
-             document.querySelectorAll('.main-nav-btn').forEach(b => b.classList.remove('active'));
-             btn.classList.add('active');
-             
-             // Mostrar contenedores
-             if(currentView === 'scripts') {
-                 document.getElementById('scripts-page-container').classList.remove('hidden');
-                 document.getElementById('querys-page-container').classList.add('hidden');
-             } else {
-                 document.getElementById('scripts-page-container').classList.add('hidden');
-                 document.getElementById('querys-page-container').classList.remove('hidden');
-             }
-             renderContent();
+        // Helpers Window
+        window.approveUser = async (uid, approve) => {
+            if(approve) await updateDoc(doc(userRolesCol, uid), { status: 'active', role: 'viewer' });
+            else if(confirm("¿Rechazar?")) await deleteDoc(doc(userRolesCol, uid));
         };
-
-        // --- SEARCH & FILTERS LISTENERS ---
-        ['search-input', 'query-search-input'].forEach(id => {
-             document.getElementById(id).addEventListener('input', renderContent);
-        });
-        document.querySelectorAll('#category-filters button, #query-category-filters button').forEach(btn => {
-             btn.onclick = (e) => {
-                 const parent = e.target.closest('nav');
-                 parent.querySelector('.active').classList.remove('active');
-                 e.target.classList.add('active');
-                 
-                 // Caso especial Learn
-                 if(e.target.dataset.category === 'learn') {
-                     document.getElementById('querys-container').classList.add('hidden');
-                     document.getElementById('sql-learning-section').classList.remove('hidden');
-                 } else {
-                     if(currentView === 'querys') {
-                         document.getElementById('querys-container').classList.remove('hidden');
-                         document.getElementById('sql-learning-section').classList.add('hidden');
-                     }
-                     renderContent();
-                 }
-             };
-        });
         
-        // --- TEMA OSCURO ---
-        document.getElementById('theme-toggle').onclick = () => {
-            document.documentElement.classList.toggle('dark');
+        window.handleRequest = async (rid, type, approve) => {
+            const reqCol = type === 'script' ? requestsCol : queryRequestsCol;
+            const mainCol = type === 'script' ? scriptsCol : querysCol;
+            
+            if(approve) {
+                const snap = await getDoc(doc(reqCol, rid));
+                const d = snap.data();
+                const data = { title:d.title, description:d.description, scriptText:d.scriptText, category:d.category, variables:d.variables||[], updatedAt: serverTimestamp() };
+                
+                if(d.action === 'add') { data.copyCount = 0; await addDoc(mainCol, data); }
+                else if(d.action === 'edit') await updateDoc(doc(mainCol, d.originalId), data);
+                else if(d.action === 'delete') await deleteDoc(doc(mainCol, d.originalId));
+            }
+            await deleteDoc(doc(reqCol, rid));
         };
 
+        // Navigation UI
+        document.querySelectorAll('#main-nav button').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelector('.main-nav-btn.active').classList.remove('active');
+                btn.classList.add('active');
+                currentView = btn.dataset.view;
+                
+                if(currentView === 'scripts') {
+                    document.getElementById('scripts-page-container').classList.remove('hidden');
+                    document.getElementById('querys-page-container').classList.add('hidden');
+                    applyScriptFilters();
+                } else {
+                    document.getElementById('scripts-page-container').classList.add('hidden');
+                    document.getElementById('querys-page-container').classList.remove('hidden');
+                    applyQueryFilters();
+                }
+            }
+        });
+
+        document.querySelectorAll('#category-filters button, #query-category-filters button').forEach(btn => {
+            btn.onclick = (e) => {
+                e.target.closest('nav').querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                if(e.target.dataset.category === 'learn') {
+                    document.getElementById('querys-container').classList.add('hidden');
+                    document.getElementById('sql-learning-section').classList.remove('hidden');
+                } else {
+                    document.getElementById('sql-learning-section')?.classList.add('hidden');
+                    document.getElementById('querys-container').classList.remove('hidden');
+                    currentView === 'scripts' ? applyScriptFilters() : applyQueryFilters();
+                }
+            }
+        });
+
+        document.getElementById('search-input').oninput = applyScriptFilters;
+        document.getElementById('query-search-input').oninput = applyQueryFilters;
+
+        // Modales Helpers
+        function openModal(el) { el.classList.remove('hidden'); setTimeout(()=>el.classList.remove('opacity-0'),10); }
+        function closeModal(el) { el.classList.add('opacity-0'); setTimeout(()=>el.classList.add('hidden'),300); }
+        
+        document.getElementById('btn-landing-login').onclick = () => openModal(document.getElementById('login-modal'));
+        document.getElementById('btn-landing-register').onclick = () => openModal(document.getElementById('register-modal'));
+        document.querySelectorAll('[id^="close-"], #cancel-btn, #cancel-delete-btn').forEach(b => b.addEventListener('click', (e) => closeModal(e.target.closest('div.fixed'))));
+        
+        // Login/Register Submit
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); closeModal(document.getElementById('login-modal')); }
+            catch(e) { document.getElementById('login-error').textContent=e.message; document.getElementById('login-error').classList.remove('hidden'); }
+        };
+        document.getElementById('register-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-password').value);
+                await setDoc(doc(userRolesCol, cred.user.uid), { email: cred.user.email, displayName: document.getElementById('reg-name').value, area: document.getElementById('reg-area').value, role: 'viewer', status: 'pending' });
+                alert("Solicitud enviada."); await signOut(auth); closeModal(document.getElementById('register-modal'));
+            } catch(e) { alert(e.message); }
+        };
+        
+        document.getElementById('theme-toggle').onclick = () => document.documentElement.classList.toggle('dark');
     </script>
 </body>
 </html>
+
 
 
 
