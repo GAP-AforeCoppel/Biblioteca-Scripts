@@ -434,10 +434,10 @@
         const copiedScripts = new Set();
         const copiedQuerys = new Set();
 
-        let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [];
+        let allScripts = [], pendingRequests = [], pendingUsers = [], allQuerys = [], pendingQueryRequests = [];
         let unsubscribeScripts = null, unsubscribeRequests = null, unsubscribeQuerys = null;
 
-        // Elementos DOM
+        // Elementos DOM Principales
         const scriptsContainer = document.getElementById('scripts-container');
         const querysContainer = document.getElementById('querys-container');
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -446,27 +446,81 @@
         const queryFilters = document.getElementById('query-category-filters');
         const scriptSearchInput = document.getElementById('search-input');
         const querySearchInput = document.getElementById('query-search-input');
+        const learningSection = document.getElementById('sql-learning-section');
+        const mainNav = document.getElementById('main-nav');
         
-        // Modales
+        // ==========================================
+        // 2. DEFINICIÓN DE MODALES Y FUNCIONES (IMPORTANTE: ESTO VA ANTES)
+        // ==========================================
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
         const itemModal = document.getElementById('add-item-modal');
         const deleteModal = document.getElementById('delete-confirm-modal');
 
+        // Funciones para abrir/cerrar
+        const openLoginModal = () => { loginModal.classList.remove('hidden'); setTimeout(() => loginModal.classList.remove('opacity-0'), 10); };
+        const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(() => loginModal.classList.add('hidden'), 300); };
+        
+        const openRegModal = () => { registerModal.classList.remove('hidden'); setTimeout(() => registerModal.classList.remove('opacity-0'), 10); };
+        const closeRegModal = () => { registerModal.classList.add('opacity-0'); setTimeout(() => registerModal.classList.add('hidden'), 300); document.getElementById('register-form').reset(); };
+
+        // Listeners de cierre de modales
+        if(document.getElementById('close-login-modal-btn')) document.getElementById('close-login-modal-btn').addEventListener('click', closeLoginModal);
+        if(document.getElementById('close-reg-modal-btn')) document.getElementById('close-reg-modal-btn').addEventListener('click', closeRegModal);
+
+        // Submit Login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+                closeLoginModal();
+            } catch(e) { alert("Error: Credenciales incorrectas o usuario no activo."); }
+        });
+
+        // Submit Registro
+        const registerForm = document.getElementById('register-form');
+        if(registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                isRegistering = true; 
+                try {
+                    const email = document.getElementById('reg-email').value;
+                    const password = document.getElementById('reg-password').value;
+                    const name = document.getElementById('reg-name').value;
+                    const area = document.getElementById('reg-area').value;
+
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    await setDoc(doc(db, "user_roles", user.uid), {
+                        email: email, displayName: name, area: area,
+                        role: 'viewer', status: 'pending', createdAt: serverTimestamp()
+                    });
+                    
+                    closeRegModal();
+                    alert("✅ Solicitud enviada. Espera aprobación.");
+                    await signOut(auth);
+                } catch (error) {
+                    console.error(error);
+                    if(error.code === 'auth/email-already-in-use') alert("Correo ya registrado.");
+                    else alert("Error: " + error.message);
+                } finally { isRegistering = false; }
+            });
+        }
+
         // ==========================================
-        // 2. CONTROLADOR MAESTRO DE CLICS (LA SOLUCIÓN)
+        // 3. CONTROLADOR MAESTRO DE CLICS (LISTENER GLOBAL)
         // ==========================================
-        // Este bloque maneja TODO clic en la aplicación, asegurando que los botones siempre funcionen
+        // Al mover las funciones de modales ARRIBA, este listener ahora sí las encuentra.
         document.getElementById('app-container').addEventListener('click', async (e) => {
             
             // A. BOTONES DE LOGIN Y REGISTRO (CENTRALES Y SUPERIORES)
+            // Usamos estilos en línea para forzar visibilidad en caso de error CSS
             if (e.target.closest('#btn-login-center') || e.target.closest('#btn-login-popup')) {
-                loginModal.classList.remove('hidden'); setTimeout(() => loginModal.classList.remove('opacity-0'), 10);
-                return;
+                openLoginModal(); return;
             }
             if (e.target.closest('#btn-register-center') || e.target.closest('#btn-register-popup')) {
-                registerModal.classList.remove('hidden'); setTimeout(() => registerModal.classList.remove('opacity-0'), 10);
-                return;
+                openRegModal(); return;
             }
 
             // B. BOTONES DE APROBACIÓN (SUPERADMIN)
@@ -499,7 +553,10 @@
                  navigator.clipboard.writeText(content).then(() => {
                      const collection = type === 'scripts' ? scriptsCollection : querysCollection;
                      const set = type === 'scripts' ? copiedScripts : copiedQuerys;
-                     updateDoc(doc(collection, id), { copyCount: increment(1) });
+                     // Verificación de seguridad antes de escribir
+                     if (currentUserRole) {
+                         updateDoc(doc(collection, id), { copyCount: increment(1) }).catch(err => console.log("Solo lectura"));
+                     }
                      set.add(id);
                      type === 'scripts' ? applyScriptFilters() : applyQueryFilters();
                      setTimeout(() => { 
@@ -526,7 +583,7 @@
         });
 
         // ==========================================
-        // 3. LÓGICA DE AUTENTICACIÓN (OBSERVADOR)
+        // 4. LÓGICA DE AUTENTICACIÓN (OBSERVADOR)
         // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (isRegistering) return;
@@ -540,7 +597,6 @@
             userId = user ? user.uid : null;
 
             if (user) {
-                // --- USUARIO DETECTADO ---
                 console.log("Usuario:", user.email);
                 try {
                     const userDoc = await getDoc(doc(userRolesCollection, user.uid));
@@ -584,15 +640,14 @@
                 loadingIndicator.style.display = 'block';
                 loadingIndicator.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md mx-auto mt-10 border border-gray-200 dark:border-gray-700">
-                        
-
-[Image of locked padlock icon]
-
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
                         <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Acceso Restringido</h3>
                         <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Biblioteca exclusiva para colaboradores.</p>
                         <div class="flex flex-col w-full gap-4">
-                            <button id="btn-login-center" style="background-color: #2563EB;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">Iniciar Sesión</button>
-                            <button id="btn-register-center" style="background-color: #16A34A;" class="w-full py-3 px-6 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">Solicitar Acceso</button>
+                            <button id="btn-login-center" style="background-color: #2563EB; color: white;" class="w-full py-3 px-6 font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">Iniciar Sesión</button>
+                            <button id="btn-register-center" style="background-color: #16A34A; color: white;" class="w-full py-3 px-6 font-bold rounded-lg shadow-lg hover:opacity-90 transition-all text-lg">Solicitar Acceso</button>
                         </div>
                     </div>
                 `;
@@ -601,7 +656,7 @@
         });
 
         // ==========================================
-        // 4. CARGA DE DATOS
+        // 5. CARGA DE DATOS
         // ==========================================
         const setupFirestoreListeners = () => {
             if (!auth.currentUser) return;
@@ -635,11 +690,39 @@
             }
         };
 
-        // ==========================================
-        // 5. RENDERIZADO Y VISTAS
-        // ==========================================
         const refreshRequestView = () => {
             if (currentView === 'scripts' && scriptFilters.querySelector('.active').dataset.category === 'requests') renderCombinedRequests();
+        };
+
+        // ==========================================
+        // 6. RENDERIZADO Y FILTROS
+        // ==========================================
+        const applyScriptFilters = () => {
+             if (!scriptsContainer) return;
+             const term = scriptSearchInput.value.toLowerCase();
+             const cat = scriptFilters.querySelector('.active').dataset.category;
+             
+             if (cat === 'requests') { renderCombinedRequests(); return; }
+
+             let filtered = allScripts;
+             if (cat === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
+             else if (cat === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+             else if (cat !== 'all') filtered = allScripts.filter(s => s.category === cat);
+             
+             if (term) filtered = filtered.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
+             renderScripts(filtered);
+        };
+
+        const applyQueryFilters = () => {
+             if (!querysContainer) return;
+             const term = querySearchInput.value.toLowerCase();
+             const cat = queryFilters.querySelector('.active').dataset.category;
+             let filtered = allQuerys;
+             if (cat === 'favorites') filtered = allQuerys.filter(q => queryFavorites.includes(q.id));
+             else if (cat === 'popular') filtered = [...allQuerys].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
+             else if (cat !== 'all' && cat !== 'learn') filtered = allQuerys.filter(q => q.category === cat);
+             if (term) filtered = filtered.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
+             renderQuerys(filtered);
         };
 
         const renderCombinedRequests = () => {
@@ -718,55 +801,6 @@
              });
         };
 
-        const applyScriptFilters = () => {
-             if (!scriptsContainer) return;
-             const term = scriptSearchInput.value.toLowerCase();
-             const cat = scriptFilters.querySelector('.active').dataset.category;
-             if (cat === 'requests') { renderCombinedRequests(); return; }
-             let filtered = allScripts;
-             if (cat === 'favorites') filtered = allScripts.filter(s => favorites.includes(s.id));
-             else if (cat === 'popular') filtered = [...allScripts].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (cat !== 'all') filtered = allScripts.filter(s => s.category === cat);
-             if (term) filtered = filtered.filter(s => s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term));
-             renderScripts(filtered);
-        };
-        const applyQueryFilters = () => {
-             if (!querysContainer) return;
-             const term = querySearchInput.value.toLowerCase();
-             const cat = queryFilters.querySelector('.active').dataset.category;
-             let filtered = allQuerys;
-             if (cat === 'favorites') filtered = allQuerys.filter(q => queryFavorites.includes(q.id));
-             else if (cat === 'popular') filtered = [...allQuerys].sort((a,b) => (b.copyCount||0) - (a.copyCount||0));
-             else if (cat !== 'all' && cat !== 'learn') filtered = allQuerys.filter(q => q.category === cat);
-             if (term) filtered = filtered.filter(q => q.title.toLowerCase().includes(term) || q.description.toLowerCase().includes(term));
-             renderQuerys(filtered);
-        };
-
-        const navigateTo = (view) => {
-            currentView = view;
-            if (view === 'scripts') {
-                scriptsPage.classList.remove('hidden');
-                querysPage.classList.add('hidden');
-                mainNav.querySelector('[data-view="scripts"]').classList.add('active');
-                mainNav.querySelector('[data-view="querys"]').classList.remove('active');
-                applyScriptFilters();
-            } else {
-                scriptsPage.classList.add('hidden');
-                querysPage.classList.remove('hidden');
-                mainNav.querySelector('[data-view="scripts"]').classList.remove('active');
-                mainNav.querySelector('[data-view="querys"]').classList.add('active');
-                const cat = queryFilters.querySelector('.active').dataset.category;
-                if(cat === 'learn') {
-                    querysContainer.classList.add('hidden');
-                    learningSection.classList.remove('hidden');
-                } else {
-                    querysContainer.classList.remove('hidden');
-                    learningSection.classList.add('hidden');
-                    applyQueryFilters();
-                }
-            }
-        };
-        
         const setupAdminUI = (role) => {
             if (role) document.body.classList.add('admin-mode');
             else document.body.classList.remove('admin-mode');
@@ -775,43 +809,10 @@
             });
         };
 
-        // --- MODALES Y FORMS ---
-        const closeLoginModal = () => { loginModal.classList.add('opacity-0'); setTimeout(()=>loginModal.classList.add('hidden'),300); };
-        document.getElementById('close-login-modal-btn').addEventListener('click', closeLoginModal);
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
-                closeLoginModal();
-            } catch(e) { alert("Error: Credenciales incorrectas o usuario no activo."); }
-        });
-
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-             document.documentElement.classList.toggle('dark');
-             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-        });
-        
-        const handleFilter = (e) => {
-             const btn = e.target.closest('.nav-button');
-             if(!btn) return;
-             btn.parentElement.querySelector('.active').classList.remove('active');
-             btn.classList.add('active');
-             if(currentView === 'scripts') applyScriptFilters();
-             else navigateTo('querys');
-        };
-        scriptFilters.addEventListener('click', handleFilter);
-        queryFilters.addEventListener('click', handleFilter);
-        scriptSearchInput.addEventListener('input', applyScriptFilters);
-        querySearchInput.addEventListener('input', applyQueryFilters);
-        if(mainNav) mainNav.addEventListener('click', (e) => {
-            const btn = e.target.closest('.main-nav-btn');
-            if(btn) navigateTo(btn.dataset.view);
-        });
-        document.body.addEventListener('click', (e) => {
-            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
-        });
-        
-        // --- ADMIN FORM LOGIC ---
+        // ==========================================
+        // 7. LÓGICA ADMIN (MODALES)
+        // ==========================================
+        const itemModal = document.getElementById('add-item-modal');
         const itemForm = document.getElementById('script-form');
         const modalTitle = document.getElementById('modal-title');
         const itemIdInput = document.getElementById('item-id');
@@ -840,6 +841,7 @@
             const isEdit = !!id;
             const col = currentView === 'scripts' ? scriptsCollection : querysCollection;
             const reqCol = currentView === 'scripts' ? requestsCollection : queryRequestsCollection;
+
             const data = {
                 title: document.getElementById('item-title').value,
                 description: document.getElementById('item-description').value,
@@ -849,11 +851,12 @@
                 updatedAt: serverTimestamp(),
                 lastUpdatedBy: auth.currentUser.uid
             };
+
             try {
                 if (currentUserRole === 'superadmin') {
                     if (isEdit) await updateDoc(doc(col, id), data);
                     else { data.copyCount = 0; await addDoc(col, data); }
-                    alert("Guardado.");
+                    alert("Guardado correctamente.");
                 } else {
                     await addDoc(reqCol, { ...data, action: isEdit?'edit':'add', originalId: id||null, status: 'pending', requestedBy: auth.currentUser.uid, timestamp: serverTimestamp() });
                     alert("Solicitud enviada.");
@@ -870,6 +873,16 @@
              document.getElementById('item-title').value = item.title;
              document.getElementById('item-description').value = item.description;
              document.getElementById('item-text').value = item.scriptText;
+             
+             const isScript = type === 'scripts';
+             document.getElementById('item-category-script').value = isScript ? item.category : '';
+             document.getElementById('item-category-query').value = !isScript ? item.category : '';
+             if(isScript) document.getElementById('item-variables').value = (item.variables||[]).join(', ');
+             
+             document.getElementById('item-category-script').classList.toggle('hidden', !isScript);
+             document.getElementById('item-category-query').classList.toggle('hidden', isScript);
+             document.getElementById('item-variables').classList.toggle('hidden', !isScript);
+
              modalTitle.textContent = 'Editar';
              itemModal.classList.remove('hidden'); setTimeout(() => itemModal.classList.remove('opacity-0'), 10);
         };
@@ -897,9 +910,38 @@
                  deleteModal.classList.add('opacity-0'); setTimeout(()=>deleteModal.classList.add('hidden'),300);
              } catch(e) { alert("Error al eliminar"); }
         });
+
+        // --- HELPERS DE NAVEGACIÓN Y TEMA ---
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             document.documentElement.classList.toggle('dark');
+             localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+        
+        const handleFilter = (e) => {
+             const btn = e.target.closest('.nav-button');
+             if(!btn) return;
+             btn.parentElement.querySelector('.active').classList.remove('active');
+             btn.classList.add('active');
+             if(currentView === 'scripts') applyScriptFilters();
+             else navigateTo('querys');
+        };
+        scriptFilters.addEventListener('click', handleFilter);
+        queryFilters.addEventListener('click', handleFilter);
+        scriptSearchInput.addEventListener('input', applyScriptFilters);
+        querySearchInput.addEventListener('input', applyQueryFilters);
+        
+        if(mainNav) mainNav.addEventListener('click', (e) => {
+            const btn = e.target.closest('.main-nav-btn');
+            if(btn) navigateTo(btn.dataset.view);
+        });
+
+        document.body.addEventListener('click', (e) => {
+            if (!e.target.closest('.options-btn')) document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+        });
     </script>
 </body>
 </html>
+
 
 
 
