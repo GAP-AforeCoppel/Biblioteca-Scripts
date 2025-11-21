@@ -304,36 +304,28 @@
         });
 
         function resetGatekeeper() { gatekeeper.classList.remove('hidden', 'opacity-0'); appContainer.classList.add('hidden', 'opacity-0'); document.getElementById('gatekeeper-loading').classList.add('hidden'); document.getElementById('gatekeeper-actions').classList.remove('hidden'); authControls.innerHTML = ''; currentUser = null; }
+        
         function setupListeners() {
-            // 1. Cargar Scripts
-            onSnapshot(scriptsCol, (snap) => { 
-                allScripts = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-                if(currentView === 'scripts') applyScriptFilters(); 
-                loadingIndicator.style.display = 'none'; 
-            });
-            
-            // 2. Cargar Querys
-            onSnapshot(querysCol, (snap) => { 
-                allQuerys = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-                if(currentView === 'querys') applyQueryFilters(); 
-            });
+            // Log para depuración
+            console.log("Iniciando listeners para rol:", currentUserRole);
 
-            // 3. Solo SUPERADMIN: Escuchar Solicitudes
-            if(currentUserRole === 'superadmin') { 
+            onSnapshot(scriptsCol, (snap) => { allScripts = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentView === 'scripts') applyScriptFilters(); loadingIndicator.style.display = 'none'; });
+            onSnapshot(querysCol, (snap) => { allQuerys = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentView === 'querys') applyQueryFilters(); });
+            
+            // CORRECCIÓN IMPORTANTE: Normalización a minúsculas para evitar error "Superadmin" vs "superadmin"
+            if(currentUserRole && currentUserRole.toLowerCase() === 'superadmin') {
                 
-                // Solicitudes de Scripts
+                // Agregamos manejo de errores (error) => console.error(error) para saber si es permiso denegado
                 onSnapshot(requestsCol, (snap) => { 
-                    pendingRequests = snap.docs.map(d => ({id: d.id, data: d.data()}));
-                    updateBadgeCount(); // <--- ¡ESTO FALTABA!
-                }); 
+                    pendingRequests = snap.docs.map(d => ({id: d.id, data: d.data()})); 
+                    updateBadgeCount(); 
+                }, (error) => console.error("Error requestsCol:", error)); 
                 
-                // Solicitudes de Querys
                 onSnapshot(queryRequestsCol, (snap) => { 
-                    pendingQueryRequests = snap.docs.map(d => ({id: d.id, data: d.data()}));
-                    updateBadgeCount(); // <--- ¡ESTO TAMBIÉN FALTABA!
-                }); 
+                    pendingQueryRequests = snap.docs.map(d => ({id: d.id, data: d.data()})); 
+                    updateBadgeCount(); 
+                }, (error) => console.error("Error queryRequestsCol:", error)); 
                 
-                // Solicitudes de Usuarios (Este ya lo tenías bien)
                 onSnapshot(userRolesCol, (snap) => { 
                     pendingUsers = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'pending'); 
                     updateBadgeCount(); 
@@ -377,7 +369,15 @@
              const count = pendingRequests.length + pendingQueryRequests.length + pendingUsers.length;
              document.getElementById('requests-count-badge').textContent = count; document.getElementById('requests-count-badge').classList.toggle('hidden', count === 0);
              document.getElementById('query-requests-count-badge').textContent = count; document.getElementById('query-requests-count-badge').classList.toggle('hidden', count === 0);
-             const active = document.querySelector('#category-filters .active'); if(active && active.dataset.category === 'requests') renderCombinedRequests();
+             
+             // CORRECCIÓN: Revisar ambos filtros activos para decidir si refrescar
+             const activeScript = document.querySelector('#category-filters .active');
+             const activeQuery = document.querySelector('#query-category-filters .active');
+             
+             if ((currentView === 'scripts' && activeScript && activeScript.dataset.category === 'requests') ||
+                 (currentView === 'querys' && activeQuery && activeQuery.dataset.category === 'requests')) {
+                 renderCombinedRequests();
+             }
         }
 
         function applyScriptFilters() {
@@ -411,7 +411,9 @@
             });
             [...pendingRequests, ...pendingQueryRequests].forEach(r => {
                 const d = r.data;
-                container.innerHTML += `<div class="bg-white dark:bg-gray-800 p-4 rounded shadow border dark:border-gray-700 relative"><span class="absolute top-2 right-2 text-xs bg-yellow-200 text-black px-2 rounded font-bold">${d.action.toUpperCase()}</span><h4 class="font-bold text-lg">${d.title}</h4><p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${d.description}</p><div class="flex gap-2 mt-2"><button onclick="handleRequest('${r.id}', '${r.data.category ? 'script' : 'query'}', true)" class="bg-green-600 text-white px-3 py-1 rounded text-sm">Aprobar</button><button onclick="handleRequest('${r.id}', '${r.data.category ? 'script' : 'query'}', false)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Rechazar</button></div></div>`;
+                // CORRECCIÓN: Protección si falta la acción (d.action || 'info')
+                const actionLabel = (d.action || 'NUEVO').toUpperCase();
+                container.innerHTML += `<div class="bg-white dark:bg-gray-800 p-4 rounded shadow border dark:border-gray-700 relative"><span class="absolute top-2 right-2 text-xs bg-yellow-200 text-black px-2 rounded font-bold">${actionLabel}</span><h4 class="font-bold text-lg">${d.title}</h4><p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${d.description}</p><div class="flex gap-2 mt-2"><button onclick="handleRequest('${r.id}', '${r.data.category ? 'script' : 'query'}', true)" class="bg-green-600 text-white px-3 py-1 rounded text-sm">Aprobar</button><button onclick="handleRequest('${r.id}', '${r.data.category ? 'script' : 'query'}', false)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Rechazar</button></div></div>`;
             });
         }
 
@@ -462,7 +464,6 @@
 
         itemForm.onsubmit = async (e) => {
             e.preventDefault(); 
-            // Guardamos los valores antes de cerrar, por si acaso
             const id = itemIdInput.value; 
             const isScript = currentView === 'scripts'; 
             const col = isScript ? scriptsCol : querysCol; 
@@ -476,29 +477,35 @@
                 updatedAt: serverTimestamp() 
             };
             
-            // CORRECCIÓN: Cerramos el modal INMEDIATAMENTE para que se sienta rápido
-            closeModal(itemModal); 
+            closeModal(itemModal); // Cerrar modal inmediatamente
 
             try { 
-                if(currentUserRole === 'superadmin') { 
+                if(currentUserRole && currentUserRole.toLowerCase() === 'superadmin') { 
                     if(id) await updateDoc(doc(col, id), data); 
                     else { data.copyCount = 0; await addDoc(col, data); } 
                 } else { 
-                    await addDoc(reqCol, { ...data, action: id?'edit':'add', originalId: id||null, status:'pending', requestedBy: currentUser.uid }); 
-                    // Usamos un pequeño timeout para que la alerta no salga tan brusca
+                    // Asegurar que el campo 'action' siempre existe
+                    const action = id ? 'edit' : 'add';
+                    await addDoc(reqCol, { ...data, action: action, originalId: id||null, status:'pending', requestedBy: currentUser.uid }); 
                     setTimeout(() => alert("Solicitud enviada."), 100); 
                 } 
-            } catch(err) { 
-                alert("Hubo un error: " + err.message); 
-            } 
+            } catch(err) { alert("Hubo un error: " + err.message); } 
         };
 
         // Delete
         let deleteTarget = null;
-        function openDeleteModal(id, type) { deleteTarget = { id, type }; document.getElementById('delete-modal-text').textContent = currentUserRole === 'superadmin' ? "¿Eliminar permanentemente?" : "¿Solicitar eliminación?"; openModal(document.getElementById('delete-confirm-modal')); }
+        function openDeleteModal(id, type) { deleteTarget = { id, type }; document.getElementById('delete-modal-text').textContent = (currentUserRole && currentUserRole.toLowerCase() === 'superadmin') ? "¿Eliminar permanentemente?" : "¿Solicitar eliminación?"; openModal(document.getElementById('delete-confirm-modal')); }
         document.getElementById('confirm-delete-btn').onclick = async () => {
             if(!deleteTarget) return; const { id, type } = deleteTarget; const col = type === 'scripts' ? scriptsCol : querysCol; const reqCol = type === 'scripts' ? requestsCol : queryRequestsCol; const list = type === 'scripts' ? allScripts : allQuerys;
-            try { if(currentUserRole === 'superadmin') await deleteDoc(doc(col, id)); else { const item = list.find(i => i.id === id); await addDoc(reqCol, { ...item, action:'delete', originalId: id, status:'pending', requestedBy: currentUser.uid }); alert("Solicitud enviada."); } closeModal(document.getElementById('delete-confirm-modal')); } catch(err) { alert(err.message); }
+            try { 
+                if(currentUserRole && currentUserRole.toLowerCase() === 'superadmin') await deleteDoc(doc(col, id)); 
+                else { 
+                    const item = list.find(i => i.id === id); 
+                    await addDoc(reqCol, { ...item, action:'delete', originalId: id, status:'pending', requestedBy: currentUser.uid }); 
+                    alert("Solicitud enviada."); 
+                } 
+                closeModal(document.getElementById('delete-confirm-modal')); 
+            } catch(err) { alert(err.message); }
         };
 
         // Global Helpers
@@ -544,30 +551,8 @@
         document.getElementById('btn-landing-login').onclick = () => openModal(document.getElementById('login-modal')); document.getElementById('btn-landing-register').onclick = () => openModal(document.getElementById('register-modal'));
         document.querySelectorAll('[id^="close-"], #cancel-btn, #cancel-delete-btn, #info-modal-close').forEach(b => b.addEventListener('click', (e) => closeModal(e.target.closest('div.fixed'))));
         document.getElementById('login-form').onsubmit = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); closeModal(document.getElementById('login-modal')); } catch(e) { document.getElementById('login-error').textContent=e.message; document.getElementById('login-error').classList.remove('hidden'); } };
-        document.getElementById('register-form').onsubmit = async (e) => { 
-            e.preventDefault(); 
-            try { 
-                const email = document.getElementById('reg-email').value;
-                const password = document.getElementById('reg-password').value;
-                const name = document.getElementById('reg-name').value;
-                const area = document.getElementById('reg-area').value;
+        document.getElementById('register-form').onsubmit = async (e) => { e.preventDefault(); try { const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-password').value); await setDoc(doc(userRolesCol, cred.user.uid), { email: cred.user.email, displayName: document.getElementById('reg-name').value, area: document.getElementById('reg-area').value, role: 'viewer', status: 'pending' }); closeModal(document.getElementById('register-modal')); alert("Solicitud enviada. Espera aprobación de un administrador."); await signOut(auth); } catch(e) { alert(e.message); } };
 
-                const cred = await createUserWithEmailAndPassword(auth, email, password); 
-                await setDoc(doc(userRolesCol, cred.user.uid), { 
-                    email: cred.user.email, 
-                    displayName: name, 
-                    area: area, 
-                    role: 'viewer', 
-                    status: 'pending' 
-                }); 
-                
-                // CORRECCIÓN: Primero cerramos, luego avisamos
-                closeModal(document.getElementById('register-modal')); 
-                alert("Solicitud enviada. Espera aprobación de un administrador."); 
-                await signOut(auth); 
-                
-            } catch(e) { alert(e.message); } 
-        };
         // LÓGICA MODO OSCURO (Restaurada)
         const themeToggle = document.getElementById('theme-toggle');
         const darkIcon = document.getElementById('theme-toggle-dark-icon');
