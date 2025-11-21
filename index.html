@@ -304,32 +304,49 @@
         });
 
         function resetGatekeeper() { gatekeeper.classList.remove('hidden', 'opacity-0'); appContainer.classList.add('hidden', 'opacity-0'); document.getElementById('gatekeeper-loading').classList.add('hidden'); document.getElementById('gatekeeper-actions').classList.remove('hidden'); authControls.innerHTML = ''; currentUser = null; }
-        
         function setupListeners() {
-            // Log para depuración
-            console.log("Iniciando listeners para rol:", currentUserRole);
-
-            onSnapshot(scriptsCol, (snap) => { allScripts = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentView === 'scripts') applyScriptFilters(); loadingIndicator.style.display = 'none'; });
-            onSnapshot(querysCol, (snap) => { allQuerys = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentView === 'querys') applyQueryFilters(); });
+            // 1. Listeners Básicos (Para todos)
+            onSnapshot(scriptsCol, (snap) => { 
+                allScripts = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+                if(currentView === 'scripts') applyScriptFilters(); 
+                loadingIndicator.style.display = 'none'; 
+            });
             
-            // CORRECCIÓN IMPORTANTE: Normalización a minúsculas para evitar error "Superadmin" vs "superadmin"
-            if(currentUserRole && currentUserRole.toLowerCase() === 'superadmin') {
-                
-                // Agregamos manejo de errores (error) => console.error(error) para saber si es permiso denegado
+            onSnapshot(querysCol, (snap) => { 
+                allQuerys = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+                if(currentView === 'querys') applyQueryFilters(); 
+            });
+
+            // 2. Validación Inteligente del Rol
+            // .trim() borra espacios invisibles al inicio o final
+            // .toLowerCase() convierte todo a minúsculas
+            const cleanRole = currentUserRole ? currentUserRole.trim().toLowerCase() : '';
+            
+            console.log(`Verificando rol: '${currentUserRole}' -> Limpio: '${cleanRole}'`);
+
+            // 3. Solo SUPERADMIN (Ahora sí entra aunque tengas espacios)
+            if(cleanRole === 'superadmin') { 
+                console.log("✅ Permiso ADMIN validado. Escuchando solicitudes...");
+
+                // Solicitudes de Scripts
                 onSnapshot(requestsCol, (snap) => { 
-                    pendingRequests = snap.docs.map(d => ({id: d.id, data: d.data()})); 
+                    pendingRequests = snap.docs.map(d => ({id: d.id, data: d.data()}));
                     updateBadgeCount(); 
-                }, (error) => console.error("Error requestsCol:", error)); 
+                }, (error) => console.error("Error en Requests:", error)); 
                 
+                // Solicitudes de Querys
                 onSnapshot(queryRequestsCol, (snap) => { 
-                    pendingQueryRequests = snap.docs.map(d => ({id: d.id, data: d.data()})); 
+                    pendingQueryRequests = snap.docs.map(d => ({id: d.id, data: d.data()}));
                     updateBadgeCount(); 
-                }, (error) => console.error("Error queryRequestsCol:", error)); 
+                }); 
                 
+                // Solicitudes de Usuarios
                 onSnapshot(userRolesCol, (snap) => { 
                     pendingUsers = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'pending'); 
                     updateBadgeCount(); 
                 }); 
+            } else {
+                console.warn("⛔ El usuario no es superadmin. Rol detectado: " + cleanRole);
             }
         }
 
@@ -608,6 +625,7 @@
     </script>
 </body>
 </html>
+
 
 
 
